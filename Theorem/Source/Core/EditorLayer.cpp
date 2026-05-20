@@ -142,6 +142,10 @@ void EditorLayer::onUpdate() {
         contextMenu = nullptr;
         shouldDeleteContextMenu = false;
     }
+    if (shouldDeleteAssetPicker) {
+        assetPickerMenu = nullptr;
+        shouldDeleteAssetPicker = false;
+    }
     refreshProfilerPanel();
     uiRoot->arrange(mainUiContext, Math::Vec2(0, 0), Math::Vec2(winWidth, winHeight));
 }
@@ -155,6 +159,14 @@ void EditorLayer::onUIRender() {
         mainUiContext.renderer->pushScissorRect({{0, 0}, {Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight()}},
                                                 mainUiContext.layer);
         contextMenu->onRender(mainUiContext, Math::Rect({0, 0}, {Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight()}));
+        mainUiContext.renderer->popScissorRect(mainUiContext.layer);
+        mainUiContext.layer = 0;
+    }
+    if (assetPickerMenu) {
+        mainUiContext.layer = 1;
+        mainUiContext.renderer->pushScissorRect({{0, 0}, {Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight()}},
+                                                mainUiContext.layer);
+        assetPickerMenu->onRender(mainUiContext, Math::Rect({0, 0}, {Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight()}));
         mainUiContext.renderer->popScissorRect(mainUiContext.layer);
         mainUiContext.layer = 0;
     }
@@ -190,12 +202,23 @@ void EditorLayer::onEvent(Axiom::Event& event) {
                     return true;
                 }
             }
+            if (assetPickerMenu) {
+                auto bounds = assetPickerMenu->getArrangedPosition();
+                auto size = assetPickerMenu->getArrangedSize();
+                if (lastMousePos.x() < bounds.x() || lastMousePos.x() > bounds.x() + size.x() || lastMousePos.y() < bounds.y() ||
+                    lastMousePos.y() > bounds.y() + size.y()) {
+                    shouldDeleteAssetPicker = true;
+                    return true;
+                }
+            }
         }
         return false;
     });
 
     if (contextMenu) {
         event.handled = contextMenu->onEvent(event);
+    } else if (assetPickerMenu) {
+        event.handled = assetPickerMenu->onEvent(event);
     } else {
         event.handled = uiRoot->onEvent(event);
     }
@@ -464,6 +487,7 @@ std::shared_ptr<Axiom::UIElement> EditorLayer::createFieldUI(const Axiom::FieldI
         buildColorUI(horizontalBox, field, fieldPtr);
         break;
     case Axiom::FieldType::AssetHandle:
+        buildAssetHandleUI(horizontalBox, field, fieldPtr);
         break;
     case Axiom::FieldType::Enum:
         buildEnumUI(horizontalBox, field, fieldPtr);
@@ -618,6 +642,38 @@ void EditorLayer::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> horizonta
         });
 }
 
+void EditorLayer::buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr) {
+    Axiom::UUID* valuePtr = static_cast<Axiom::UUID*>(fieldPtr);
+
+    auto slotBox = std::make_shared<Axiom::UIHorizontalBox>();
+    slotBox->setHorizontalAlignment(Axiom::UIAlignment::Fill);
+    slotBox->setPadding({4.0f, 4.0f, 4.0f, 4.0f});
+
+    auto getAssetName = [valuePtr]() -> std::string {
+        if (valuePtr->isValid()) {
+            return Axiom::AssetManager::getMetadata(*valuePtr).filePath.filename().string();
+        }
+        return "None";
+    };
+
+    auto assetButton = std::make_shared<Axiom::UIButton>(getAssetName());
+    assetButton->setHorizontalAlignment(Axiom::UIAlignment::Fill);
+    assetButton->setMargin({0.0f, 0.0f, 4.0f, 0.0f});
+    assetButton->setOnClick([this, valuePtr, assetButton, field]() { buildAssetPickerPopUp(valuePtr, assetButton, field); });
+
+    auto clearButton = std::make_shared<Axiom::UIButton>("X");
+    clearButton->setFixedSize({24.0f, 24.0f});
+    clearButton->setNormalColor(uiRoot->getTheme()->errorColor);
+    clearButton->setOnClick([valuePtr, assetButton, getAssetName]() {
+        *valuePtr = Axiom::UUID();
+        assetButton->setText(getAssetName());
+    });
+
+    slotBox->addChild(assetButton);
+    slotBox->addChild(clearButton);
+    horizontalBox->addChild(slotBox);
+}
+
 void EditorLayer::buildEnumUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr) {
     int* valuePtr = static_cast<int*>(fieldPtr);
     auto dropdown = std::make_shared<Axiom::UIDropdown>(field.enumOptions);
@@ -626,4 +682,44 @@ void EditorLayer::buildEnumUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontal
     dropdown->setOnSelectionChanged([this, valuePtr](int index, const std::string& optionText) { *valuePtr = index; });
 
     horizontalBox->addChild(dropdown);
+}
+
+void EditorLayer::buildAssetPickerPopUp(Axiom::UUID* valuePtr, std::shared_ptr<Axiom::UIButton> assetButton, const Axiom::FieldInfo& field) {
+    assetPickerMenu = std::make_shared<Axiom::UIPanel>();
+    assetPickerMenu->setBackgroundColor(uiRoot->getTheme()->panelBackgroundColor);
+    assetPickerMenu->setPadding({4.0f, 4.0f, 4.0f, 4.0f});
+
+    auto vBox = std::make_shared<Axiom::UIVerticalBox>();
+    assetPickerMenu->addChild(vBox);
+
+    Axiom::AssetType requiredType = Axiom::AssetType::Texture; // Replace with dynamic check
+
+    std::vector<Axiom::UUID> availableAssets = Axiom::AssetManager::getAssetsByType(requiredType);
+
+    if (availableAssets.empty()) {
+        auto emptyLabel = std::make_shared<Axiom::UIText>("No assets found.");
+        emptyLabel->setColor(uiRoot->getTheme()->textMutedColor);
+        vBox->addChild(emptyLabel);
+    } else {
+        for (Axiom::UUID assetID : availableAssets) {
+            std::string fileName = Axiom::AssetManager::getMetadata(assetID).filePath.filename().string();
+
+            auto btn = std::make_shared<Axiom::UIButton>(fileName);
+            btn->setHorizontalAlignment(Axiom::UIAlignment::Fill);
+            btn->setMargin({0.0f, 0.0f, 0.0f, 2.0f});
+
+            btn->setOnClick([this, valuePtr, assetButton, assetID, fileName]() {
+                *valuePtr = assetID;
+                assetButton->setText(fileName);
+
+                shouldDeleteAssetPicker = true;
+                shouldRefreshInspector = true;
+            });
+
+            vBox->addChild(btn);
+        }
+    }
+
+    Math::Vec2 spawnPos = assetButton->getArrangedPosition() + Math::Vec2(0.0f, assetButton->getArrangedSize().y() + 4.0f);
+    assetPickerMenu->arrange(mainUiContext, spawnPos, assetPickerMenu->getDesiredSize(mainUiContext));
 }

@@ -26,10 +26,10 @@ namespace Axiom {
 
         if (!FileSystem::exists(path)) {
             AX_CORE_LOG_ERROR("Tried to import an asset that does not exist: {}", path.generic_string());
-            return 0;
+            return UUID();
         }
 
-        UUID newID = UUID();
+        UUID newID = UUID::generate();
         AssetMetadata meta;
         meta.filePath = path;
         meta.type = type;
@@ -146,8 +146,6 @@ namespace Axiom {
             return;
         }
 
-        loadedAssets[0] = nullptr; // reserve the null handle
-
         JSONValue serializerValue = JSONSerializer::deserialize(manifestStr);
 
         if (serializerValue.getType() == JSONValueType::Object && serializerValue.hasChild("Assets")) {
@@ -181,6 +179,10 @@ namespace Axiom {
         JSONValue root;
         JSONValue assetsNode;
         for (const auto& [uuid, meta] : registry) {
+            if (!uuid.isValid()) {
+                continue;
+            }
+
             JSONValue assetNode;
 
             JSONValue filePathValue;

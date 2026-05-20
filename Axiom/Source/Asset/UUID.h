@@ -7,9 +7,13 @@
 namespace Axiom {
     class UUID {
       public:
-        UUID() : value(distribution(generator)) {}
+        UUID() : value(0) {}
         UUID(uint64_t value) : value(value) {}
         ~UUID() = default;
+
+        inline static UUID generate() { return UUID(distribution(generator)); }
+
+        inline bool isValid() const { return value != 0; }
 
         operator uint64_t() const { return value; }
 

@@ -20,6 +20,10 @@ namespace Axiom {
 
       public:
         template <typename T> static std::shared_ptr<T> getAsset(UUID handle) {
+            if (!handle.isValid()) {
+                return nullptr;
+            }
+
             if (loadedAssets.find(handle) != loadedAssets.end()) {
                 return std::static_pointer_cast<T>(loadedAssets[handle]);
             }
@@ -59,8 +63,30 @@ namespace Axiom {
         static Buffer* getGlobalVertexBuffer() { return globalVertexBuffer.get(); }
         static Buffer* getGlobalIndexBuffer() { return globalIndexBuffer.get(); }
 
-        static const AssetMetadata& getMetadata(UUID handle) { return registry.at(handle); }
-        static bool isAssetRegistered(UUID handle) { return registry.find(handle) != registry.end(); }
+        static const AssetMetadata& getMetadata(UUID handle) {
+            static AssetMetadata nullMeta;
+            if (!handle.isValid() || registry.find(handle) == registry.end()) {
+                return nullMeta;
+            }
+            return registry.at(handle);
+        }
+        static bool isAssetRegistered(UUID handle) {
+            if (!handle.isValid()) {
+                return false;
+            }
+
+            return registry.find(handle) != registry.end();
+        }
+
+        static std::vector<UUID> getAssetsByType(AssetType type) {
+            std::vector<UUID> handles;
+            for (const auto& [handle, meta] : registry) {
+                if (meta.type == type) {
+                    handles.push_back(handle);
+                }
+            }
+            return handles;
+        }
 
       private:
         static void init();

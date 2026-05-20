@@ -104,12 +104,8 @@ namespace Axiom {
         // gizmo pass data
         static const uint32_t MAX_GIZMO_LINES = 1000;
         std::shared_ptr<ShaderAsset> gizmoShader = nullptr;
+        std::shared_ptr<MeshAsset> gizmoMesh = nullptr;
         std::unique_ptr<Pipeline> gizmoPipeline = nullptr;
         RenderPass gizmoRenderPass;
-        std::unique_ptr<Buffer> gizmoVertexBuffer = nullptr;
-        struct GizmoVertex {
-            Math::Vec4 position;
-            Math::Vec4 color;
-        };
     };
 } // namespace Axiom

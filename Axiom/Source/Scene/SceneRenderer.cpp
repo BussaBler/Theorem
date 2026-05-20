@@ -154,6 +154,7 @@ namespace Axiom {
     }
 
     void SceneRenderer::skyboxPass(const SceneRenderPassData& data) {
+        AX_PROFILE_FUNCTION();
         Math::iVec2 renderTargetSize = data.renderTarget->getSize();
         skyboxRenderPass.colorAttachments[0].texture = data.renderTarget;
         skyboxRenderPass.width = renderTargetSize.x();
@@ -172,7 +173,7 @@ namespace Axiom {
     }
 
     void SceneRenderer::worldGridPass(const SceneRenderPassData& data) {
-
+        AX_PROFILE_FUNCTION();
         Math::iVec2 renderTargetSize = data.renderTarget->getSize();
         worldGridRenderPass.colorAttachments[0].texture = data.renderTarget;
         worldGridRenderPass.width = renderTargetSize.x();
@@ -189,21 +190,45 @@ namespace Axiom {
     }
 
     void SceneRenderer::gizmoPass(const SceneRenderPassData& data, const Math::Vec3& gizmoPosition) {
-        Math::Mat4 model = Math::Mat4::model(gizmoPosition, Math::Vec3::zero(), Math::Vec3(1.0f));
+        AX_PROFILE_FUNCTION();
+        struct PushConstants {
+            Math::Mat4 model;
+            Math::Vec4 color;
+        };
+
+        PushConstants pushConstants = {.model = Math::Mat4::identity(), .color = Color::white()};
+        float distanceToTheCamera =
+            Math::length(Math::Vec3(globalData.cameraPosition.x(), globalData.cameraPosition.y(), globalData.cameraPosition.z()) - gizmoPosition);
+        float scale = distanceToTheCamera * 0.05f;
 
         Math::iVec2 renderTargetSize = data.renderTarget->getSize();
         gizmoRenderPass.colorAttachments[0].texture = data.renderTarget;
         gizmoRenderPass.width = renderTargetSize.x();
         gizmoRenderPass.height = renderTargetSize.y();
-        gizmoRenderPass.depthAttachment.texture = data.depthTarget;
 
         data.commandBuffer->beginRendering(gizmoRenderPass);
         data.commandBuffer->bindPipeline(gizmoPipeline.get());
-        data.commandBuffer->bindVertexBuffers({gizmoVertexBuffer.get()});
+        data.commandBuffer->bindVertexBuffers({AssetManager::getGlobalVertexBuffer()});
+        data.commandBuffer->bindIndexBuffer(AssetManager::getGlobalIndexBuffer());
         data.commandBuffer->setViewport(0.0f, 0.0f, renderTargetSize.x(), renderTargetSize.y());
         data.commandBuffer->setScissor(0, 0, renderTargetSize.x(), renderTargetSize.y());
         data.commandBuffer->bindResources({globalDataResourceSet.get()});
-        data.commandBuffer->draw(6, 1, 0);
+        // Y axis
+        pushConstants.model = Math::Mat4::model(gizmoPosition, Math::Vec3::zero(), Math::Vec3(scale));
+        pushConstants.color = Color::green();
+        data.commandBuffer->bindPushConstants(&pushConstants, sizeof(PushConstants));
+        data.commandBuffer->drawIndexed(gizmoMesh->getIndexCount(), 1, gizmoMesh->getIndexOffset(), gizmoMesh->getVertexOffset(), 0);
+        // Z axis
+        pushConstants.model = Math::Mat4::model(gizmoPosition, Math::Vec3(0.0f, 0.0f, Math::PI * -0.5f), Math::Vec3(scale));
+        pushConstants.color = Color::blue();
+        data.commandBuffer->bindPushConstants(&pushConstants, sizeof(PushConstants));
+        data.commandBuffer->drawIndexed(gizmoMesh->getIndexCount(), 1, gizmoMesh->getIndexOffset(), gizmoMesh->getVertexOffset(), 0);
+        // X axis
+        pushConstants.model = Math::Mat4::model(gizmoPosition, Math::Vec3(Math::PI * 0.5f, 0.0f, 0.0f), Math::Vec3(scale));
+        pushConstants.color = Color::red();
+        data.commandBuffer->bindPushConstants(&pushConstants, sizeof(PushConstants));
+        data.commandBuffer->drawIndexed(gizmoMesh->getIndexCount(), 1, gizmoMesh->getIndexOffset(), gizmoMesh->getVertexOffset(), 0);
+
         data.commandBuffer->endRendering();
     }
 
@@ -468,20 +493,8 @@ namespace Axiom {
     void SceneRenderer::createGizmoPassResources() {
         UUID gizmoShaderHandle = AssetManager::importAsset("Assets/Shaders/BuiltIn.Scene.Gizmo.axs", AssetType::Shader);
         gizmoShader = AssetManager::getAsset<ShaderAsset>(gizmoShaderHandle);
-
-        Buffer::CreateInfo vertexBufferCreateInfo = {.size = sizeof(GizmoVertex) * 2 * 3, .usage = BufferUsage::Vertex, .memoryUsage = MemoryUsage::GPUandCPU};
-        gizmoVertexBuffer = Locator::getRenderer()->createBuffer(vertexBufferCreateInfo);
-        Buffer::CreateInfo stagingBufferCreateInfo = {
-            .size = sizeof(GizmoVertex) * 2 * 3, .usage = BufferUsage::TransferSrc, .memoryUsage = MemoryUsage::GPUandCPU};
-        std::unique_ptr<Buffer> stagingBuffer = Locator::getRenderer()->createBuffer(stagingBufferCreateInfo);
-        std::vector<GizmoVertex> vertices = {
-            {{0.0f, 0.0f, 0.0f, 1.0f}, Color::red()},     {{100.0f, 0.0f, 0.0f, 1.0f}, Color::red()}, {{0.0f, 0.0f, 0.0f, 1.0f}, Color::green()},
-            {{0.0f, 100.0f, 0.0f, 1.0f}, Color::green()}, {{0.0f, 0.0f, 0.0f, 1.0f}, Color::blue()},  {{0.0f, 0.0f, 100.0f, 1.0f}, Color::blue()},
-        };
-        stagingBuffer->setData<GizmoVertex>(vertices);
-        auto commandBuffer = Locator::getRenderer()->beginSingleTimeCommands();
-        commandBuffer->copyBuffer(stagingBuffer.get(), gizmoVertexBuffer.get(), vertexBufferCreateInfo.size);
-        Locator::getRenderer()->endSingleTimeCommands(commandBuffer.get());
+        UUID gizmoMeshHandle = AssetManager::importAsset("Assets/Models/Arrow.obj", AssetType::Mesh);
+        gizmoMesh = AssetManager::getAsset<MeshAsset>(gizmoMeshHandle);
 
         RenderAttachment colorAttachment{};
         colorAttachment.loadOp = LoadOp::Load;
@@ -490,18 +503,19 @@ namespace Axiom {
         gizmoRenderPass.colorAttachments[0] = colorAttachment;
         gizmoRenderPass.colorAttachmentCount = 1;
 
-        std::vector<VertexBindingDescription> vertexBindings = {{.binding = 0, .stride = sizeof(GizmoVertex), .inputRate = VertexInputRate::Vertex}};
+        std::vector<VertexBindingDescription> vertexBindings = {{.binding = 0, .stride = sizeof(MeshVertex), .inputRate = VertexInputRate::Vertex}};
         std::vector<VertexAttributeDescription> vertexAttributes = {
-            {.location = 0, .binding = 0, .format = Format::R32G32B32Sfloat, .offset = offsetof(GizmoVertex, position)},
-            {.location = 1, .binding = 0, .format = Format::R32G32B32A32Sfloat, .offset = offsetof(GizmoVertex, color)},
+            {.location = 0, .binding = 0, .format = Format::R32G32B32Sfloat, .offset = offsetof(MeshVertex, position)},
+            {.location = 1, .binding = 0, .format = Format::R32G32B32Sfloat, .offset = offsetof(MeshVertex, normal)},
+            {.location = 2, .binding = 0, .format = Format::R32G32Sfloat, .offset = offsetof(MeshVertex, uv)},
         };
 
         Pipeline::CreateInfo pipelineCreateInfo = {.shader = gizmoShader->getShader(),
                                                    .vertexBindings = vertexBindings,
                                                    .vertexAttributes = vertexAttributes,
-                                                   .topology = PrimitiveTopology::LineList,
+                                                   .topology = PrimitiveTopology::TriangleList,
                                                    .polygonMode = PolygonMode::Fill,
-                                                   .cullMode = CullMode::None,
+                                                   .cullMode = CullMode::Back,
                                                    .frontFaceClockwise = true,
                                                    .enableBlending = true,
                                                    .enableDepthTest = false,

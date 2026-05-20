@@ -97,11 +97,12 @@ namespace Axiom {
     }
 
     template <typename T> inline bool UIScalarField<T>::onEvent(Event& event) {
-        if (UIElement::onEvent(event)) {
+        if (event.isHandled()) {
             return true;
         }
 
         EventDispatcher dispatcher(event);
+
         dispatcher.dispatch<MouseButtonPressedEvent>([this](const MouseButtonPressedEvent& event) {
             if (event.getMouseButton() == KeyCode::LeftButton) {
                 if (isHovered) {

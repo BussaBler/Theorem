@@ -31,8 +31,10 @@ class EditorLayer : public Axiom::Layer {
     void buildVec3UI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr);
     void buildVec4UI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr);
     void buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr);
-
+    void buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr);
     void buildEnumUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr);
+
+    void buildAssetPickerPopUp(Axiom::UUID* valuePtr, std::shared_ptr<Axiom::UIButton> assetButton, const Axiom::FieldInfo& field);
 
   private:
     Math::uVec2 viewportSize{0, 0};
@@ -49,11 +51,13 @@ class EditorLayer : public Axiom::Layer {
     std::shared_ptr<Axiom::UIVerticalBox> hierarchyPanel;
     std::shared_ptr<Axiom::UIVerticalBox> inspectorPanel;
     std::shared_ptr<Axiom::UIVerticalBox> profilerPanel;
+    std::shared_ptr<Axiom::UIPanel> contextMenu = nullptr;
+    std::shared_ptr<Axiom::UIPanel> assetPickerMenu = nullptr;
     bool shouldRefreshHierarchy = false;
     bool shouldRefreshInspector = false;
     bool shouldDeleteContextMenu = false;
+    bool shouldDeleteAssetPicker = false;
 
-    std::shared_ptr<Axiom::UIPanel> contextMenu = nullptr;
     Math::Vec2 lastMousePos = Math::Vec2::zero();
 
     Axiom::Entity selectedEntity = Axiom::Entity();

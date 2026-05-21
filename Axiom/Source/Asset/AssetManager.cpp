@@ -4,9 +4,14 @@
 
 #include "AxImageLoader.h"
 #include "AxModelLoader.h"
+#include "MeshAsset.h"
 #include "Renderer/Renderer.h"
+#include "ShaderAsset.h"
+#include "TextureAsset.h"
 #include "Utils/FileSystem.h"
 #include "Utils/JSONSerializer.h"
+
+#include <filesystem>
 
 namespace Axiom {
     std::unordered_map<UUID, AssetMetadata> AssetManager::registry;
@@ -19,7 +24,7 @@ namespace Axiom {
     uint32_t AssetManager::currentIndexCount = 0;
 
     UUID AssetManager::importAsset(const std::filesystem::path& path, AssetType type) {
-        std::string cacheString = path.generic_string();
+        std::string cacheString = path.lexically_normal().generic_string();
         if (assetHandles.find(cacheString) != assetHandles.end()) {
             return assetHandles[cacheString];
         }
@@ -31,7 +36,7 @@ namespace Axiom {
 
         UUID newID = UUID::generate();
         AssetMetadata meta;
-        meta.filePath = path;
+        meta.filePath = std::filesystem::path(cacheString);
         meta.type = type;
 
         registry[newID] = meta;
@@ -156,15 +161,17 @@ namespace Axiom {
                 uint64_t uuidValue = std::stoull(uuidStr);
 
                 const auto& assetData = dataNode.getChildren();
-                std::string path = assetData.at("FilePath").getString();
+                std::string rawPath = assetData.at("FilePath").getString();
                 AssetType type = static_cast<AssetType>(assetData.at("Type").getInt());
 
+                std::string cacheString = std::filesystem::path(rawPath).lexically_normal().generic_string();
+
                 AssetMetadata meta;
-                meta.filePath = path;
+                meta.filePath = std::filesystem::path(cacheString);
                 meta.type = type;
 
                 registry[UUID(uuidValue)] = meta;
-                assetHandles[path] = UUID(uuidValue);
+                assetHandles[cacheString] = UUID(uuidValue);
             }
         }
     }

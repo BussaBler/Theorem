@@ -1,16 +1,15 @@
 #pragma once
-#include "Asset/AssetManager.h"
+#include "Asset/ShaderAsset.h"
 #include "Core/Locator.h"
 #include "Font.h"
 #include "Math/AxMath.h"
 #include "Math/Color.h"
-#include "Renderer/Renderer.h"
+#include "Renderer/CommandBuffer.h"
+#include "Renderer/ResourceSet.h"
 #include "UIVertex.h"
 
 #include <array>
-#include <memory>
 #include <stack>
-#include <vector>
 
 namespace Axiom {
     class UIRenderer {

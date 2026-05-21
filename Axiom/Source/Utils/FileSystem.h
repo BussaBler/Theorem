@@ -1,5 +1,9 @@
 #pragma once
-#include "Core/Log.h"
+
+#include <cstdint>
+#include <filesystem>
+#include <string>
+#include <vector>
 
 namespace Axiom {
     struct FileInfo {

@@ -90,6 +90,11 @@ namespace Axiom {
 
             return componentTypes[typeName];
         }
+        uint8_t getComponentType(std::type_index type) {
+            AX_CORE_ASSERT(componentTypes.find(type) != componentTypes.end(), "Component not registered before use.");
+
+            return componentTypes[type];
+        }
 
         template <typename T> void addComponent(uint32_t entityId, T component) { getComponentArray<T>()->insertData(entityId, component); }
         template <typename T> void removeComponent(uint32_t entityId) { getComponentArray<T>()->removeData(entityId); }

@@ -383,16 +383,16 @@ void EditorLayer::refreshInspectorPanel() {
         return btn;
     };
 
-    addComponentGroup->addChild(createAddButton(
-        "Camera", [this]() { return selectedEntity.hasComponent<Axiom::CameraComponent>(); },
-        [this]() { selectedEntity.addComponent<Axiom::CameraComponent>({}); }));
+    const auto& allComponents = Axiom::ComponentReflection::getRegistry();
+    for (const auto& [typeIndex, componentInfo] : allComponents) {
+        if (componentInfo.name == "TagComponent" || componentInfo.name == "Tag") {
+            continue;
+        }
 
-    addComponentGroup->addChild(createAddButton(
-        "Transform", [this]() { return selectedEntity.hasComponent<Axiom::TransformComponent>(); },
-        [this]() { selectedEntity.addComponent<Axiom::TransformComponent>({}); }));
-    addComponentGroup->addChild(createAddButton(
-        "Sprite Renderer", [this]() { return selectedEntity.hasComponent<Axiom::Sprite2DComponent>(); },
-        [this]() { selectedEntity.addComponent<Axiom::Sprite2DComponent>({}); }));
+        addComponentGroup->addChild(createAddButton(
+            componentInfo.name.substr(0, componentInfo.name.find("Component")), [this, typeIndex]() { return selectedEntity.hasComponent(typeIndex); },
+            [this, typeIndex, componentInfo]() { Axiom::ComponentReflection::addComponent(selectedEntity, componentInfo.name, nullptr); }));
+    }
 
     inspectorPanel->addChild(addComponentGroup);
 }
@@ -692,9 +692,7 @@ void EditorLayer::buildAssetPickerPopUp(Axiom::UUID* valuePtr, std::shared_ptr<A
     auto vBox = std::make_shared<Axiom::UIVerticalBox>();
     assetPickerMenu->addChild(vBox);
 
-    Axiom::AssetType requiredType = Axiom::AssetType::Texture; // Replace with dynamic check
-
-    std::vector<Axiom::UUID> availableAssets = Axiom::AssetManager::getAssetsByType(requiredType);
+    std::vector<Axiom::UUID> availableAssets = Axiom::AssetManager::getAssetsByType(field.assetType);
 
     if (availableAssets.empty()) {
         auto emptyLabel = std::make_shared<Axiom::UIText>("No assets found.");

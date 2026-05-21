@@ -2,6 +2,13 @@
 
 #include "ConsoleLayer.h"
 
+#include "CommandRegistry.h"
+#include "UI/Elements/UIPanel.h"
+#include "UI/Elements/UIText.h"
+#include "UI/Elements/UITextInput.h"
+#include "UI/Elements/UIVerticalBox.h"
+#include "Window.h"
+
 namespace Axiom {
     void ConsoleLayer::onAttach() {
         AX_CORE_LOG_DEBUG("ConsoleLayer attached");

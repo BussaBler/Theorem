@@ -2,6 +2,10 @@
 
 #include "UIRenderer.h"
 
+#include "Asset/AssetManager.h"
+#include "Core/Locator.h"
+#include "Renderer/Renderer.h"
+
 namespace Axiom {
     UIRenderer::UIRenderer() {
         auto& asciiAtlas = openSansFont.getAsciiAtlas();

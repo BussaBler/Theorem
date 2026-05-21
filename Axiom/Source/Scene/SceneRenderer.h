@@ -1,14 +1,7 @@
 #pragma once
-#include "Asset/AssetManager.h"
+#include "Asset/MeshAsset.h"
 #include "Asset/ShaderAsset.h"
-#include "Components/CameraComponent.h"
-#include "Components/DirectionalLightComponent.h"
-#include "Components/MeshComponent.h"
-#include "Components/Sprite2DComponent.h"
-#include "Components/TagComponent.h"
-#include "Components/TransformComponent.h"
-#include "Core/Locator.h"
-#include "Renderer/Renderer.h"
+#include "Renderer/CommandBuffer.h"
 #include "Scene.h"
 
 namespace Axiom {

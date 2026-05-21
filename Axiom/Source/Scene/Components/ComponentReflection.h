@@ -1,4 +1,5 @@
 #pragma once
+#include "Asset/Asset.h"
 #include "Core/Log.h"
 #include "ECS/Entity.h"
 
@@ -27,6 +28,7 @@ namespace Axiom {
         FieldType type;
         size_t offset;
         std::vector<std::string> enumOptions = {};
+        AssetType assetType = AssetType::None;
     };
 
     struct ComponentInfo {
@@ -56,6 +58,8 @@ namespace Axiom {
             return nullptr;
         }
         static void addComponent(Entity entity, const std::string& componentName, void* componentData);
+
+        inline static const std::unordered_map<std::type_index, ComponentInfo>& getRegistry() { return componentRegistry; }
 
       private:
         static std::unordered_map<std::type_index, ComponentInfo> componentRegistry;

@@ -6,7 +6,7 @@
 
 namespace Axiom {
     struct AX_COMPONENT() Sprite2DComponent {
-        AX_PROPERTY() UUID textureId = 0;
+        AX_PROPERTY(AssetType::Texture) UUID textureId = 0;
         AX_PROPERTY() SamplerAddressMode addressMode = SamplerAddressMode::Repeat;
         AX_PROPERTY() SamplerFilterMode filterMode = SamplerFilterMode::Linear;
         AX_PROPERTY() Color color = Color::white();

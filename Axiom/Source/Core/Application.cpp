@@ -25,10 +25,12 @@ namespace Axiom {
 
         renderer = std::make_unique<Renderer>(window.get());
         Locator::provideRenderer(renderer.get());
+
+        AssetManager::init();
+
         uiRenderer = std::make_unique<UIRenderer>();
         Locator::provideUIRenderer(uiRenderer.get());
 
-        AssetManager::init();
         ComponentReflection::init();
     }
 

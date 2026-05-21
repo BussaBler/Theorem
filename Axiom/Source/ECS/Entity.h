@@ -11,6 +11,7 @@ namespace Axiom {
         ~Entity() = default;
 
         template <typename T> bool hasComponent() { return registry->getComponentSignature(id).test(registry->getComponentType<T>()); }
+        bool hasComponent(std::type_index type) { return registry->getComponentSignature(id).test(registry->getComponentType(type)); }
         template <typename T> void addComponent(T component) { registry->addComponent<T>(id, component); }
         template <typename T> T& getComponent() { return registry->getComponent<T>(id); }
         template <typename T> const T& getComponent() const { return registry->getComponent<T>(id); }

@@ -4,6 +4,8 @@
 *.userosscache
 *.sln.docstates
 .DS_Store
+compile_commands.json
+.zed/
 
 # Visual C++ cache files
 *.VC.db
@@ -11,7 +13,7 @@
 
 .vs/
 
-# Visual C++ generated files
+# C++ generated files
 ipch/
 *.pch
 *.obj
@@ -21,6 +23,7 @@ ipch/
 *.ipdb
 *.iobj
 .clang-format
+.cache/
 
 # Build folders
 Debug*/

@@ -1,6 +1,9 @@
 #pragma once
 #include "UIElement.h"
 
+#include <functional>
+#include <optional>
+
 namespace Axiom {
     class UICheckbox : public UIElement {
       public:

@@ -4,11 +4,8 @@
 #include "Math/AxMath.h"
 #include "UI/UIRenderer.h"
 
-#include <algorithm>
 #include <memory>
-#include <optional>
 #include <string>
-#include <vector>
 
 namespace Axiom {
     enum class UIAlignment { Fill, Start, Center, End };

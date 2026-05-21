@@ -2,6 +2,8 @@
 
 #include "FileSystem.h"
 
+#include "Core/Log.h"
+
 namespace Axiom {
     std::filesystem::path FileSystem::workingDirectory = std::filesystem::current_path();
 
@@ -31,6 +33,7 @@ namespace Axiom {
         std::string buf(size, '\0');
         in.seekg(0, std::ios::beg);
         in.read(buf.data(), size);
+        in.close();
         return buf;
     }
 
@@ -39,6 +42,7 @@ namespace Axiom {
         if (!out)
             AX_CORE_LOG_ERROR("Could not write the file: {0}", filePath.string());
         out.write(reinterpret_cast<const char*>(data.data()), data.size());
+        out.close();
     }
 
     std::vector<FileInfo> FileSystem::getDirectory(const std::filesystem::path& folderPath) {

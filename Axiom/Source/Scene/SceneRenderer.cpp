@@ -2,7 +2,11 @@
 
 #include "SceneRenderer.h"
 
+#include "Asset/AssetManager.h"
+#include "Asset/TextureAsset.h"
+#include "Core/Locator.h"
 #include "Core/Profiler.h"
+#include "Renderer/Renderer.h"
 
 namespace Axiom {
     SceneRenderer::SceneRenderer() {
@@ -218,14 +222,14 @@ namespace Axiom {
         pushConstants.color = Color::green();
         data.commandBuffer->bindPushConstants(&pushConstants, sizeof(PushConstants));
         data.commandBuffer->drawIndexed(gizmoMesh->getIndexCount(), 1, gizmoMesh->getIndexOffset(), gizmoMesh->getVertexOffset(), 0);
-        // Z axis
+        // X axis
         pushConstants.model = Math::Mat4::model(gizmoPosition, Math::Vec3(0.0f, 0.0f, Math::PI * -0.5f), Math::Vec3(scale));
-        pushConstants.color = Color::blue();
+        pushConstants.color = Color::red();
         data.commandBuffer->bindPushConstants(&pushConstants, sizeof(PushConstants));
         data.commandBuffer->drawIndexed(gizmoMesh->getIndexCount(), 1, gizmoMesh->getIndexOffset(), gizmoMesh->getVertexOffset(), 0);
-        // X axis
+        // Z axis
         pushConstants.model = Math::Mat4::model(gizmoPosition, Math::Vec3(Math::PI * 0.5f, 0.0f, 0.0f), Math::Vec3(scale));
-        pushConstants.color = Color::red();
+        pushConstants.color = Color::blue();
         data.commandBuffer->bindPushConstants(&pushConstants, sizeof(PushConstants));
         data.commandBuffer->drawIndexed(gizmoMesh->getIndexCount(), 1, gizmoMesh->getIndexOffset(), gizmoMesh->getVertexOffset(), 0);
 

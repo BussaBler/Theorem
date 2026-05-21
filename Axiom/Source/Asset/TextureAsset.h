@@ -1,3 +1,4 @@
+#pragma once
 #include "Asset.h"
 #include "Renderer/Sampler.h"
 #include "Renderer/Texture.h"

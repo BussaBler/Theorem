@@ -1,6 +1,42 @@
 {
     "Entities": [
         {
+            "EntityID": 1,
+            "Components": {
+                "TagComponent": {
+                    "tag": "A"
+                },
+                "TransformComponent": {
+                    "position": {
+                        "x": 0.000000,
+                        "z": 0.000000,
+                        "y": 0.000000
+                    },
+                    "rotation": {
+                        "x": 0.000000,
+                        "z": 0.000000,
+                        "y": 0.000000
+                    },
+                    "scale": {
+                        "x": 1.000000,
+                        "z": 1.000000,
+                        "y": 1.000000
+                    }
+                },
+                "Sprite2DComponent": {
+                    "filterMode": 1,
+                    "textureId": "3045946400928158378",
+                    "addressMode": 2,
+                    "color": {
+                        "g": 1.000000,
+                        "b": 1.000000,
+                        "r": 1.000000,
+                        "a": 1.000000
+                    }
+                }
+            }
+        },
+        {
             "Components": {
                 "Sprite2DComponent": {
                     "color": {
@@ -9,8 +45,8 @@
                         "b": 1.000000,
                         "g": 1.000000
                     },
-                    "addressMode": 2,
-                    "textureId": "15471021209606049030",
+                    "addressMode": 0,
+                    "textureId": "0",
                     "filterMode": 1
                 },
                 "TransformComponent": {
@@ -27,14 +63,14 @@
                     "position": {
                         "y": 0.000000,
                         "z": 0.000000,
-                        "x": 0.000000
+                        "x": 1.000000
                     }
                 },
                 "TagComponent": {
                     "tag": "New Entity"
                 }
             },
-            "EntityID": 1
+            "EntityID": 2
         }
     ]
 }

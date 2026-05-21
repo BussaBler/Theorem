@@ -3,6 +3,7 @@
 #include "EditorCamera.h"
 #include <string>
 #include <format>
+#include <memory>
 
 class EditorLayer : public Axiom::Layer {
   public:

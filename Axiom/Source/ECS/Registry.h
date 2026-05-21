@@ -84,6 +84,7 @@ namespace Axiom {
 
         template <typename T> void registerComponent() { componentManager->registerComponent<T>(); }
         template <typename T> uint8_t getComponentType() { return componentManager->getComponentType<T>(); }
+        uint8_t getComponentType(std::type_index type) { return componentManager->getComponentType(type); }
 
         template <typename... Components> View view() {
             std::bitset<32> signature;

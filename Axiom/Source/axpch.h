@@ -1,5 +1,6 @@
 #pragma once
 
+// IWYU pragma: begin_exports
 #include "Core/Base.h"
 
 #include <algorithm>
@@ -33,3 +34,4 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+// IMYU pragma: end_exports

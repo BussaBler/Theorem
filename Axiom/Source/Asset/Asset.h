@@ -1,7 +1,6 @@
 #pragma once
 #include "UUID.h"
 
-#include <memory>
 #include <string>
 
 namespace Axiom {

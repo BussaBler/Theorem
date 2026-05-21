@@ -1,6 +1,8 @@
 #pragma once
 #include "UIElement.h"
 
+#include <vector>
+
 namespace Axiom {
     class UIContainer : public UIElement {
       public:

@@ -1,6 +1,8 @@
 #pragma once
 #include "UIContainer.h"
 
+#include <string>
+
 namespace Axiom {
     class UICollapsableGroup : public UIContainer {
       public:

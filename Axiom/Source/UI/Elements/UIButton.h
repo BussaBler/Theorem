@@ -1,6 +1,10 @@
 #pragma once
 #include "UIElement.h"
 
+#include <functional>
+#include <optional>
+#include <string>
+
 namespace Axiom {
     class UIButton : public UIElement {
       public:

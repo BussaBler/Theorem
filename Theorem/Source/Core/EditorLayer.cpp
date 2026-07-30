@@ -1,5 +1,15 @@
 #include "EditorLayer.h"
 
+#include "Asset/Asset.h"
+#include "Asset/AssetManager.h"
+#include "Core/Locator.h"
+#include "Renderer/ForwardRenderPipeline.h"
+#include "Renderer/RenderGraph.h"
+#include "Renderer/RenderPipeline.h"
+#include "Scene/Components/TransformComponent.h"
+
+#include <memory>
+
 EditorLayer::EditorLayer() : Layer("EditorLayer") {
 }
 
@@ -76,10 +86,8 @@ void EditorLayer::onAttach() {
         Axiom::AX_LOG_ERROR("Failed to deserialize the scene");
     }
 
-    Axiom::UUID textureHandle = Axiom::AssetManager::importAsset("Assets/Textures/redstone_block.png", Axiom::AssetType::Texture);
+    Axiom::UUID textureHandle = Axiom::AssetManager::importAsset("Redstone Block", "Assets/Textures/redstone_block.png", Axiom::AssetType::Texture);
     textureAsset = Axiom::AssetManager::getAsset<Axiom::TextureAsset>(textureHandle);
-
-    sceneRenderer = std::make_unique<Axiom::SceneRenderer>();
 
     Axiom::Texture::CreateInfo createInfo = {
         .width = 1920,
@@ -224,29 +232,26 @@ void EditorLayer::onEvent(Axiom::Event& event) {
     }
 }
 
-void EditorLayer::onRender(Axiom::CommandBuffer* commandBuffer) {
-    Math::Mat4 view = editorCamera->getView();
-    Math::Mat4 projection = editorCamera->getProjection();
-    Math::Vec3 camPos = editorCamera->getPosition();
-    sceneRenderer->beginScene(scene.get(), projection, view, camPos);
-
+void EditorLayer::onRender(Axiom::RenderGraph& renderGraph) {
     uint32_t currentFrameIndex = Axiom::Locator::getRenderer()->getCurrentFrameIndex();
     std::shared_ptr<Axiom::Texture> renderTarget = sceneTextures[currentFrameIndex];
     std::shared_ptr<Axiom::Texture> depthTexture = depthTextures[currentFrameIndex];
-    Axiom::SceneRenderPassData data = {
-        .scene = scene.get(),
-        .commandBuffer = commandBuffer,
-        .renderTarget = renderTarget.get(),
-        .depthTarget = depthTexture.get(),
-    };
 
-    sceneRenderer->opaquePass(data);
-    sceneRenderer->skyboxPass(data);
-    sceneRenderer->worldGridPass(data);
-    if (selectedEntity && selectedEntity.hasComponent<Axiom::TransformComponent>()) {
-        auto& transform = selectedEntity.getComponent<Axiom::TransformComponent>();
-        sceneRenderer->gizmoPass(data, transform.position);
+    Axiom::RenderContext renderView = {.targetScene = scene.get(),
+                                       .viewMatrix = editorCamera->getView(),
+                                       .projectionMatrix = editorCamera->getProjection(),
+                                       .cameraPosition = editorCamera->getPosition(),
+                                       .renderTarget = renderTarget.get(),
+                                       .depthTarget = depthTexture.get(),
+                                       .shouldDrawSkybox = true,
+                                       .shouldDrawGizmos = false,
+                                       .shouldDrawWorldGrid = true};
+    if (selectedEntity) {
+        renderView.shouldDrawGizmos = true;
+        renderView.gizmosPosition = selectedEntity.getComponent<Axiom::TransformComponent>().position;
     }
+
+    Axiom::Locator::getRenderer()->getForwardRenderPipeline()->render(renderGraph, renderView);
 
     viewportImage->setTexture(renderTarget);
 }
@@ -386,6 +391,10 @@ void EditorLayer::refreshInspectorPanel() {
     const auto& allComponents = Axiom::ComponentReflection::getRegistry();
     for (const auto& [typeIndex, componentInfo] : allComponents) {
         if (componentInfo.name == "TagComponent" || componentInfo.name == "Tag") {
+            continue;
+        }
+
+        if (selectedEntity.hasComponent(typeIndex)) {
             continue;
         }
 
@@ -651,7 +660,7 @@ void EditorLayer::buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> hor
 
     auto getAssetName = [valuePtr]() -> std::string {
         if (valuePtr->isValid()) {
-            return Axiom::AssetManager::getMetadata(*valuePtr).filePath.filename().string();
+            return Axiom::AssetManager::getMetadata(*valuePtr).name;
         }
         return "None";
     };
@@ -700,15 +709,15 @@ void EditorLayer::buildAssetPickerPopUp(Axiom::UUID* valuePtr, std::shared_ptr<A
         vBox->addChild(emptyLabel);
     } else {
         for (Axiom::UUID assetID : availableAssets) {
-            std::string fileName = Axiom::AssetManager::getMetadata(assetID).filePath.filename().string();
+            std::string assetName = Axiom::AssetManager::getMetadata(assetID).name;
 
-            auto btn = std::make_shared<Axiom::UIButton>(fileName);
+            auto btn = std::make_shared<Axiom::UIButton>(assetName);
             btn->setHorizontalAlignment(Axiom::UIAlignment::Fill);
             btn->setMargin({0.0f, 0.0f, 0.0f, 2.0f});
 
-            btn->setOnClick([this, valuePtr, assetButton, assetID, fileName]() {
+            btn->setOnClick([this, valuePtr, assetButton, assetID, assetName]() {
                 *valuePtr = assetID;
-                assetButton->setText(fileName);
+                assetButton->setText(assetName);
 
                 shouldDeleteAssetPicker = true;
                 shouldRefreshInspector = true;

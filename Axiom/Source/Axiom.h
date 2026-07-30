@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Asset/AssetManager.h"
+#include "Asset/MaterialAsset.h"
 #include "Asset/MeshAsset.h"
 #include "Asset/TextureAsset.h"
 #include "Core/Application.h"
@@ -15,6 +16,7 @@
 #include "Math/AxMath.h"
 #include "Math/Color.h"
 #include "Renderer/Camera.h"
+#include "Renderer/ForwardRenderPipeline.h"
 #include "Scene/Components/CameraComponent.h"
 #include "Scene/Components/ComponentReflection.h"
 #include "Scene/Components/DirectionalLightComponent.h"
@@ -23,7 +25,6 @@
 #include "Scene/Components/TagComponent.h"
 #include "Scene/Components/TransformComponent.h"
 #include "Scene/Scene.h"
-#include "Scene/SceneRenderer.h"
 #include "Scene/SceneSerializer.h"
 #include "UI/Elements/UIButton.h"
 #include "UI/Elements/UICanvas.h"

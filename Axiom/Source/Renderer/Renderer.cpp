@@ -2,6 +2,14 @@
 
 #include "Renderer.h"
 
+#include "Renderer/ForwardRenderPipeline.h"
+#include "Renderer/Pipeline.h"
+#include "Renderer/ResourceLayout.h"
+#include "Renderer/ResourceSet.h"
+
+#include <memory>
+#include <utility>
+
 namespace Axiom {
     Renderer::Renderer(Window* windowPtr) : window(windowPtr) {
         Device::CreateInfo deviceCreateInfo{};
@@ -15,12 +23,15 @@ namespace Axiom {
         presentBarrier = {.oldState = TextureState::RenderTarget, .newState = TextureState::Present, .aspect = TextureAspect::Color};
         depthBarrier = {.oldState = TextureState::Undefined, .newState = TextureState::DepthStencilTarget, .aspect = TextureAspect::Depth};
 
-        createDefaultTexture();
         createDefaultSamplers();
     }
 
     Renderer::~Renderer() {
         device->waitIdle();
+    }
+
+    void Renderer::initPipelines() {
+        forwardRP = std::make_unique<ForwardRenderPipeline>();
     }
 
     void Renderer::waitIdle() {
@@ -37,16 +48,16 @@ namespace Axiom {
         commandBuffer->begin();
 
         renderTargetBarrier.texture = swapChain->getCurrentTexture();
-        commandBuffer->pipelineBarrier({renderTargetBarrier});
+        // commandBuffer->pipelineBarrier({renderTargetBarrier});
         depthBarrier.texture = swapChain->getCurrentDepthTexture();
-        commandBuffer->pipelineBarrier({depthBarrier});
+        // commandBuffer->pipelineBarrier({depthBarrier});
         return commandBuffer;
     }
 
     void Renderer::endFrame() {
         CommandBuffer* commandBuffer = device->getCurrentCommandBuffer();
         presentBarrier.texture = renderTargetBarrier.texture;
-        commandBuffer->pipelineBarrier({presentBarrier});
+        // commandBuffer->pipelineBarrier({presentBarrier});
         commandBuffer->end();
 
         device->submitCommandBuffers({commandBuffer}, swapChain.get());
@@ -80,12 +91,28 @@ namespace Axiom {
         return device->createResourceLayout(bindings);
     }
 
+    std::unique_ptr<ResourceSet> Renderer::createResourceSet(const ResourceLayout* resourceLayout) {
+        return device->createResourceSet(resourceLayout);
+    }
+
     std::unique_ptr<CommandBuffer> Renderer::beginSingleTimeCommands() {
         return device->beginSingleTimeCommands();
     }
 
     void Renderer::endSingleTimeCommands(CommandBuffer* commandBuffer) {
         device->endSingleTimeCommands(commandBuffer);
+    }
+
+    Pipeline* Renderer::getOrCreatePipeline(const Pipeline::CreateInfo& pipelineCreateInfo) {
+        if (pipelineCache.find(pipelineCreateInfo) != pipelineCache.end()) {
+            return pipelineCache[pipelineCreateInfo].get();
+        }
+
+        std::unique_ptr<Pipeline> newPipeline = createPipeline(pipelineCreateInfo);
+        Pipeline* pNewPipeline = newPipeline.get();
+        pipelineCache[pipelineCreateInfo] = std::move(newPipeline);
+
+        return pNewPipeline;
     }
 
     void Renderer::recreateSwapChain() {
@@ -95,46 +122,6 @@ namespace Axiom {
         device->waitIdle();
         swapChain.reset();
         swapChain = device->createSwapchain(width, height);
-    }
-
-    void Renderer::createDefaultTexture() {
-        const uint32_t defaultTextureSize = 4;
-
-        Texture::CreateInfo textureCreateInfo = {.width = defaultTextureSize,
-                                                 .height = defaultTextureSize,
-                                                 .mipLevels = 1,
-                                                 .arrayLayers = 1,
-                                                 .format = Format::R8G8B8A8Unorm,
-                                                 .usage = TextureUsage::Sampled | TextureUsage::TransferDst,
-                                                 .aspect = TextureAspect::Color,
-                                                 .initialState = TextureState::Undefined,
-                                                 .memoryUsage = MemoryUsage::GPUOnly};
-        defaultTexture = device->createTexture(textureCreateInfo);
-
-        Buffer::CreateInfo stagingBufferCreateInfo = {
-            .size = defaultTextureSize * defaultTextureSize * sizeof(uint32_t), .usage = BufferUsage::TransferSrc, .memoryUsage = MemoryUsage::GPUandCPU};
-        std::unique_ptr<Buffer> stagingBuffer = device->createBuffer(stagingBufferCreateInfo);
-
-        // Magenta: R=255, G=0, B=255, A=255
-        // Black:   R=0,   G=0, B=0,   A=255
-        const uint32_t magenta = 0xFF00FFFF; // AABBGGRR (check your API's expected byte order)
-        const uint32_t black = 0xFF000000;
-
-        std::array<uint32_t, defaultTextureSize * defaultTextureSize> defaultTextureData;
-        for (uint32_t y = 0; y < defaultTextureSize; y++) {
-            for (uint32_t x = 0; x < defaultTextureSize; x++) {
-                if ((x + y) % 2 == 0) {
-                    defaultTextureData[y * defaultTextureSize + x] = magenta;
-                } else {
-                    defaultTextureData[y * defaultTextureSize + x] = black;
-                }
-            }
-        }
-
-        std::unique_ptr<CommandBuffer> commandBuffer = device->beginSingleTimeCommands();
-        stagingBuffer->setData<uint32_t>(defaultTextureData);
-        commandBuffer->copyBufferToTexture(stagingBuffer.get(), defaultTexture.get(), defaultTextureSize, defaultTextureSize);
-        device->endSingleTimeCommands(commandBuffer.get());
     }
 
     void Renderer::createDefaultSamplers() {

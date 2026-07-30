@@ -215,6 +215,8 @@ namespace Axiom {
             default:
                 break;
             }
+
+            barrier.texture->setCurrentState(barrier.newState);
         }
 
         Vk::DependencyInfo dependencyInfo{};

@@ -1,0 +1,3 @@
+// vertex input for screen space shaders
+layout(location = 0) in vec2 aPosition;
+layout(location = 1) in vec2 aTexCoord;

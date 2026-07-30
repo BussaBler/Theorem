@@ -45,7 +45,7 @@ namespace Math {
         bool operator==(const Vec<T, N>& other) const {
             bool isNear = true;
             for (size_t i = 0; i < N; i++) {
-                if (abs(data[i] - other.data[i]) >= EPSILON) {
+                if (abs(data[i] - other.data[i]) >= std::numeric_limits<float>::epsilon()) {
                     isNear = false;
                 }
             }

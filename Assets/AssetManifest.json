@@ -1,44 +1,74 @@
 {
     "Assets": {
-        "8331564917474802212": {
-            "FilePath": "Assets/Shaders/BuiltIn.Scene.Sprite2D.axs",
-            "Type": 5
+        "11326925332497411714": {
+            "FilePath": "Assets/Shaders/BuiltIn.Skybox.axs",
+            "Type": 5,
+            "Name": "BuiltIn.Skybox"
         },
-        "14163473982890855001": {
-            "FilePath": "Assets/Shaders/BuiltIn.Scene.Skybox.axs",
-            "Type": 5
+        "8040350463209317312": {
+            "FilePath": "Assets/Shaders/BuiltIn.WorldGrid.axs",
+            "Type": 5,
+            "Name": "BuiltIn.WorldGrid"
         },
-        "3045946400928158378": {
-            "FilePath": "Assets/Textures/redstone_block.png",
-            "Type": 1
+        "11567134999236377175": {
+            "FilePath": "Assets/Shaders/BuiltIn.DefaultPBR.axs",
+            "Type": 5,
+            "Name": "Default PBR Shader"
         },
-        "2430193449512719424": {
-            "FilePath": "Assets/Shaders/BuiltIn.Scene.Gizmo.axs",
-            "Type": 5
-        },
-        "8013684306525117187": {
-            "FilePath": "Assets/Shaders/BuiltIn.Scene.Mesh.axs",
-            "Type": 5
-        },
-        "6104831837087890612": {
-            "FilePath": "Assets/Shaders/BuiltIn.UI.axs",
-            "Type": 5
-        },
-        "14002100161455686154": {
-            "FilePath": "Assets/Shaders/BuiltIn.UI.Image.axs",
-            "Type": 5
-        },
-        "2284499443149657168": {
+        "3727080228251945287": {
             "FilePath": "Assets/Shaders/BuiltIn.Scene.Grid.axs",
-            "Type": 5
+            "Type": 5,
+            "Name": "BuiltIn.WorldGrid.Shader"
         },
-        "2082291165565366364": {
-            "FilePath": "Assets/Models/Arrow.obj",
-            "Type": 2
+        "2500113659276541196": {
+            "FilePath": "Assets/Shaders/BuiltIn.Scene.Mesh.axs",
+            "Type": 5,
+            "Name": "Default Mesh Shader"
         },
-        "12784945952506072566": {
+        "8616679551463174619": {
             "FilePath": "Assets/Shaders/BuiltIn.UI.Font.axs",
-            "Type": 5
+            "Type": 5,
+            "Name": "BuiltIn.UIFont.Shader"
+        },
+        "10623591220371147166": {
+            "FilePath": "Assets/Shaders/BuiltIn.UI.axs",
+            "Type": 5,
+            "Name": "BuiltIn.UI.Shader"
+        },
+        "7204103962654060289": {
+            "FilePath": "Assets/Shaders/BuiltIn.Scene.Gizmo.axs",
+            "Type": 5,
+            "Name": "BuiltIn.Gizmos.Shader"
+        },
+        "7989956531822104966": {
+            "FilePath": "Assets/Shaders/BuiltIn.Scene.Sprite2D.axs",
+            "Type": 5,
+            "Name": "Default Sprite Shader"
+        },
+        "15254342969015181865": {
+            "FilePath": "Assets/Shaders/BuiltIn.UI.Image.axs",
+            "Type": 5,
+            "Name": "BuiltIn.UIImage.Shader"
+        },
+        "7533513385780319426": {
+            "FilePath": "Assets/Textures/redstone_block.png",
+            "Type": 1,
+            "Name": "Redstone Block"
+        },
+        "10451215315480203872": {
+            "FilePath": "Assets/Shaders/BuiltIn.Gizmos.axs",
+            "Type": 5,
+            "Name": "BuiltIn.Gizmos"
+        },
+        "8154291818152419705": {
+            "FilePath": "Assets/Shaders/BuiltIn.Scene.Skybox.axs",
+            "Type": 5,
+            "Name": "Default Skybox Shader"
+        },
+        "783200770965254659": {
+            "FilePath": "Assets/Models/Arrow.obj",
+            "Type": 2,
+            "Name": "BuiltIn.Arrow.Mesh"
         }
     }
 }

@@ -341,7 +341,7 @@ namespace Axiom {
     }
 
     void UIRenderer::createBasicRenderObjects() {
-        UUID basicShaderHandle = AssetManager::importAsset("Assets/Shaders/BuiltIn.UI.axs", AssetType::Shader);
+        UUID basicShaderHandle = AssetManager::importAsset("BuiltIn.UI.Shader", "Assets/Shaders/BuiltIn.UI.axs", AssetType::Shader);
         basicShader = AssetManager::getAsset<ShaderAsset>(basicShaderHandle);
 
         Buffer::CreateInfo vertexBufferCreateInfo = {
@@ -405,7 +405,7 @@ namespace Axiom {
     }
 
     void UIRenderer::createFontRenderObjects() {
-        UUID fontShaderHandle = AssetManager::importAsset("Assets/Shaders/BuiltIn.UI.Font.axs", AssetType::Shader);
+        UUID fontShaderHandle = AssetManager::importAsset("BuiltIn.UIFont.Shader", "Assets/Shaders/BuiltIn.UI.Font.axs", AssetType::Shader);
         fontShader = AssetManager::getAsset<ShaderAsset>(fontShaderHandle);
 
         Buffer::CreateInfo vertexBufferCreateInfo = {
@@ -485,12 +485,12 @@ namespace Axiom {
                                                    .depthAttachmentFormat = Format::Undefined,
                                                    .resourceLayouts = {fontResourceLayout.get()}};
         fontPipeline = Locator::getRenderer()->createPipeline(pipelineCreateInfo);
-        fontResourceSet = fontPipeline->createResourceSet(fontResourceLayout.get());
+        fontResourceSet = Locator::getRenderer()->createResourceSet(fontResourceLayout.get());
         fontResourceSet->update(resourceSetBindings);
     }
 
     void UIRenderer::createImageRenderObjects() {
-        UUID imageShaderHandle = AssetManager::importAsset("Assets/Shaders/BuiltIn.UI.Image.axs", AssetType::Shader);
+        UUID imageShaderHandle = AssetManager::importAsset("BuiltIn.UIImage.Shader", "Assets/Shaders/BuiltIn.UI.Image.axs", AssetType::Shader);
         imageShader = AssetManager::getAsset<ShaderAsset>(imageShaderHandle);
 
         Buffer::CreateInfo vertexBufferCreateInfo = {.size = sizeof(UIVertex) * 4, .usage = BufferUsage::Vertex, .memoryUsage = MemoryUsage::GPUandCPU};
@@ -572,7 +572,7 @@ namespace Axiom {
         resourceSetBindings[1].binding = 1;
         resourceSetBindings[1].type = ResourceType::Sampler;
         resourceSetBindings[1].samplers = {Locator::getRenderer()->getNearestSampler()};
-        std::unique_ptr<ResourceSet> resourceSet = imagePipeline->createResourceSet(imageResourceLayout.get());
+        std::unique_ptr<ResourceSet> resourceSet = Locator::getRenderer()->createResourceSet(imageResourceLayout.get());
         resourceSet->update(resourceSetBindings);
         ResourceSet* resourceSetPtr = resourceSet.get();
         imageResourceSets[texture] = std::move(resourceSet);

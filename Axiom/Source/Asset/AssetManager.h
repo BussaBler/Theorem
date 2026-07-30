@@ -1,15 +1,20 @@
 #pragma once
 #include "Asset.h"
+#include "Asset/MaterialAsset.h"
+#include "Asset/UUID.h"
 #include "Core/Locator.h"
 #include "Core/Log.h"
 #include "Renderer/Buffer.h"
+#include "TextureAsset.h"
 
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <unordered_map>
 
 namespace Axiom {
     struct AssetMetadata {
+        std::string name = "";
         AssetType type = AssetType::None;
         std::filesystem::path filePath = "";
     };
@@ -45,6 +50,8 @@ namespace Axiom {
             case AssetType::Mesh:
                 newAsset = loadMesh(meta.filePath, handle);
                 break;
+            case AssetType::Material:
+                newAsset = loadMaterial(meta.filePath, handle);
             default:
                 break;
             }
@@ -57,7 +64,7 @@ namespace Axiom {
             return nullptr;
         }
 
-        static UUID importAsset(const std::filesystem::path& path, AssetType type);
+        static UUID importAsset(const std::string& name, const std::filesystem::path& path, AssetType type);
 
         static Buffer* getGlobalVertexBuffer() { return globalVertexBuffer.get(); }
         static Buffer* getGlobalIndexBuffer() { return globalIndexBuffer.get(); }
@@ -87,13 +94,20 @@ namespace Axiom {
             return handles;
         }
 
+        static UUID getDefaultTextureHandle() { return defaultTextureHandle; }
+        static std::shared_ptr<TextureAsset> getDefaultTexture() { return std::static_pointer_cast<TextureAsset>(loadedAssets[defaultTextureHandle]); }
+        static std::shared_ptr<MaterialAsset> getDefaultMaterial() { return std::static_pointer_cast<MaterialAsset>(loadedAssets[defaultMaterialHandle]); }
+
       private:
         static void init();
         static void shutdown();
 
+        static void initDefaultAssets();
+
         static std::shared_ptr<Asset> loadTexture(const std::filesystem::path& path, UUID uuid);
         static std::shared_ptr<Asset> loadShader(const std::filesystem::path& path, UUID uuid);
         static std::shared_ptr<Asset> loadMesh(const std::filesystem::path& path, UUID uuid);
+        static std::shared_ptr<Asset> loadMaterial(const std::filesystem::path& path, UUID uuid);
 
       private:
         static std::unordered_map<UUID, AssetMetadata> registry;
@@ -104,5 +118,8 @@ namespace Axiom {
         static std::unique_ptr<Buffer> globalIndexBuffer;
         static uint32_t currentVertexCount;
         static uint32_t currentIndexCount;
+
+        static const UUID defaultTextureHandle;
+        static const UUID defaultMaterialHandle;
     };
 } // namespace Axiom

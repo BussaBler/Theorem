@@ -2,8 +2,14 @@
 
 #include "AssetManager.h"
 
+#include "Asset/Asset.h"
+#include "Asset/MaterialAsset.h"
+#include "Asset/UUID.h"
 #include "AxImageLoader.h"
 #include "AxModelLoader.h"
+#include "Core/Locator.h"
+#include "Core/Log.h"
+#include "Math/Color.h"
 #include "MeshAsset.h"
 #include "Renderer/Renderer.h"
 #include "ShaderAsset.h"
@@ -11,7 +17,10 @@
 #include "Utils/FileSystem.h"
 #include "Utils/JSONSerializer.h"
 
+#include <cstddef>
 #include <filesystem>
+#include <memory>
+#include <string>
 
 namespace Axiom {
     std::unordered_map<UUID, AssetMetadata> AssetManager::registry;
@@ -23,7 +32,10 @@ namespace Axiom {
     uint32_t AssetManager::currentVertexCount = 0;
     uint32_t AssetManager::currentIndexCount = 0;
 
-    UUID AssetManager::importAsset(const std::filesystem::path& path, AssetType type) {
+    const UUID AssetManager::defaultTextureHandle = 1;
+    const UUID AssetManager::defaultMaterialHandle = 2;
+
+    UUID AssetManager::importAsset(const std::string& name, const std::filesystem::path& path, AssetType type) {
         std::string cacheString = path.lexically_normal().generic_string();
         if (assetHandles.find(cacheString) != assetHandles.end()) {
             return assetHandles[cacheString];
@@ -35,14 +47,145 @@ namespace Axiom {
         }
 
         UUID newID = UUID::generate();
-        AssetMetadata meta;
-        meta.filePath = std::filesystem::path(cacheString);
-        meta.type = type;
+        AssetMetadata meta = {.name = name, .type = type, .filePath = path};
 
         registry[newID] = meta;
         assetHandles[cacheString] = newID;
 
         return newID;
+    }
+
+    void AssetManager::init() {
+        uint64_t globalBufferSize = Math::megabytes(512);
+
+        Buffer::CreateInfo vertexBufferCreateInfo = {
+            .size = globalBufferSize, .usage = BufferUsage::Vertex | BufferUsage::TransferDst, .memoryUsage = MemoryUsage::GPUOnly};
+        globalVertexBuffer = Locator::getRenderer()->createBuffer(vertexBufferCreateInfo);
+        Buffer::CreateInfo indexBufferCreateInfo = {
+            .size = globalBufferSize, .usage = BufferUsage::Index | BufferUsage::TransferDst, .memoryUsage = MemoryUsage::GPUOnly};
+        globalIndexBuffer = Locator::getRenderer()->createBuffer(indexBufferCreateInfo);
+
+        std::string manifestStr = FileSystem::readFileStr("Assets/AssetManifest.json");
+
+        if (!manifestStr.empty()) {
+            JSONValue serializerValue = JSONSerializer::deserialize(manifestStr);
+
+            if (serializerValue.getType() == JSONValueType::Object && serializerValue.hasChild("Assets")) {
+                const JSONValue& assetNode = serializerValue.getChild("Assets");
+                const auto& children = assetNode.getChildren();
+
+                for (const auto& [uuidStr, dataNode] : children) {
+                    uint64_t uuidValue = std::stoull(uuidStr);
+
+                    const auto& assetData = dataNode.getChildren();
+                    std::string name = assetData.at("Name").getString();
+                    std::string rawPath = assetData.at("FilePath").getString();
+                    AssetType type = static_cast<AssetType>(assetData.at("Type").getInt());
+
+                    std::string cacheString = std::filesystem::path(rawPath).lexically_normal().generic_string();
+
+                    AssetMetadata meta = {.name = name, .type = type, .filePath = std::filesystem::path(cacheString)};
+
+                    registry[UUID(uuidValue)] = meta;
+                    assetHandles[cacheString] = UUID(uuidValue);
+                }
+            }
+        }
+
+        initDefaultAssets();
+    }
+
+    void AssetManager::shutdown() {
+        loadedAssets.clear();
+        assetHandles.clear();
+
+        globalVertexBuffer.reset();
+        globalIndexBuffer.reset();
+
+        JSONValue root;
+        JSONValue assetsNode;
+        for (const auto& [uuid, meta] : registry) {
+            if (!uuid.isValid() || meta.filePath.empty()) {
+                continue;
+            }
+
+            JSONValue assetNode;
+
+            JSONValue nameValue;
+            nameValue.setString(meta.name);
+            assetNode.setChild("Name", nameValue);
+
+            JSONValue filePathValue;
+            filePathValue.setString(meta.filePath.generic_string());
+            assetNode.setChild("FilePath", filePathValue);
+
+            JSONValue typeValue;
+            typeValue.setInt(static_cast<int>(meta.type));
+            assetNode.setChild("Type", typeValue);
+
+            assetsNode.setChild(std::to_string(uuid), assetNode);
+        }
+
+        root.setChild("Assets", assetsNode);
+        FileSystem::writeFile("Assets/AssetManifest.json", JSONSerializer::serialize(root));
+
+        registry.clear();
+    }
+
+    void AssetManager::initDefaultAssets() {
+        // Default texture
+        const uint32_t defaultTextureSize = 4;
+
+        Texture::CreateInfo textureCreateInfo = {.width = defaultTextureSize,
+                                                 .height = defaultTextureSize,
+                                                 .mipLevels = 1,
+                                                 .arrayLayers = 1,
+                                                 .format = Format::R8G8B8A8Unorm,
+                                                 .usage = TextureUsage::Sampled | TextureUsage::TransferDst,
+                                                 .aspect = TextureAspect::Color,
+                                                 .initialState = TextureState::Undefined,
+                                                 .memoryUsage = MemoryUsage::GPUOnly};
+        std::unique_ptr<Texture> defaultTexture = Locator::getRenderer()->createTexture(textureCreateInfo);
+
+        Buffer::CreateInfo stagingBufferCreateInfo = {
+            .size = defaultTextureSize * defaultTextureSize * sizeof(uint32_t), .usage = BufferUsage::TransferSrc, .memoryUsage = MemoryUsage::GPUandCPU};
+        std::unique_ptr<Buffer> stagingBuffer = Locator::getRenderer()->createBuffer(stagingBufferCreateInfo);
+
+        // Magenta: R=255, G=0, B=255, A=255
+        // Black:   R=0,   G=0, B=0,   A=255
+        const uint32_t magenta = 0xFF00FFFF; // AABBGGRR (check your API's expected byte order)
+        const uint32_t black = 0xFF000000;
+
+        std::array<uint32_t, defaultTextureSize * defaultTextureSize> defaultTextureData;
+        for (uint32_t y = 0; y < defaultTextureSize; y++) {
+            for (uint32_t x = 0; x < defaultTextureSize; x++) {
+                if ((x + y) % 2 == 0) {
+                    defaultTextureData[y * defaultTextureSize + x] = magenta;
+                } else {
+                    defaultTextureData[y * defaultTextureSize + x] = black;
+                }
+            }
+        }
+
+        std::unique_ptr<CommandBuffer> commandBuffer = Locator::getRenderer()->beginSingleTimeCommands();
+        stagingBuffer->setData<uint32_t>(defaultTextureData);
+        commandBuffer->copyBufferToTexture(stagingBuffer.get(), defaultTexture.get(), defaultTextureSize, defaultTextureSize);
+        Locator::getRenderer()->endSingleTimeCommands(commandBuffer.get());
+
+        AssetMetadata defaultTextureMeta = {.name = "Default Texture", .type = AssetType::Texture, .filePath = ""};
+        registry[defaultTextureHandle] = defaultTextureMeta;
+        loadedAssets[defaultTextureHandle] = std::make_shared<TextureAsset>(defaultMaterialHandle, "Default Texture", std::move(defaultTexture));
+
+        // Default material
+        std::filesystem::path defaultShaderPath = "Assets/Shaders/BuiltIn.DefaultPBR.axs";
+        UUID defaultShaderHandle = importAsset("Default PBR Shader", defaultShaderPath, AssetType::Shader);
+
+        auto material = std::make_shared<MaterialAsset>(defaultMaterialHandle, "Default PBR", defaultShaderHandle, nullptr);
+        material->setAlbedoColor(Color::lightGray());
+
+        AssetMetadata defaultMaterialMeta = {.name = "Default Material", .type = AssetType::Material, .filePath = ""};
+        registry[defaultMaterialHandle] = defaultMaterialMeta;
+        loadedAssets[defaultMaterialHandle] = material;
     }
 
     std::shared_ptr<Asset> AssetManager::loadTexture(const std::filesystem::path& path, UUID uuid) {
@@ -135,77 +278,72 @@ namespace Axiom {
         return nullptr;
     }
 
-    void AssetManager::init() {
-        uint64_t globalBufferSize = Math::megabytes(512);
-
-        Buffer::CreateInfo vertexBufferCreateInfo = {
-            .size = globalBufferSize, .usage = BufferUsage::Vertex | BufferUsage::TransferDst, .memoryUsage = MemoryUsage::GPUOnly};
-        globalVertexBuffer = Locator::getRenderer()->createBuffer(vertexBufferCreateInfo);
-        Buffer::CreateInfo indexBufferCreateInfo = {
-            .size = globalBufferSize, .usage = BufferUsage::Index | BufferUsage::TransferDst, .memoryUsage = MemoryUsage::GPUOnly};
-        globalIndexBuffer = Locator::getRenderer()->createBuffer(indexBufferCreateInfo);
-
-        std::string manifestStr = FileSystem::readFileStr("Assets/AssetManifest.json");
-        if (manifestStr.empty()) {
-            AX_CORE_LOG_WARN("Asset manifest not found, starting with an empty registry");
-            return;
+    std::shared_ptr<Asset> AssetManager::loadMaterial(const std::filesystem::path& path, UUID uuid) {
+        std::string fileContent = FileSystem::readFileStr(path);
+        if (fileContent.empty()) {
+            AX_CORE_LOG_ERROR("Failed to read material file: {}", path.generic_string());
+            return nullptr;
         }
 
-        JSONValue serializerValue = JSONSerializer::deserialize(manifestStr);
+        JSONValue root = JSONSerializer::deserialize(fileContent);
+        if (root.getType() != JSONValueType::Object) {
+            AX_CORE_LOG_ERROR("Invalid material file format: {}", path.generic_string());
+            return nullptr;
+        }
 
-        if (serializerValue.getType() == JSONValueType::Object && serializerValue.hasChild("Assets")) {
-            const JSONValue& assetNode = serializerValue.getChild("Assets");
-            const auto& children = assetNode.getChildren();
+        std::string name = path.filename().string();
+        if (root.hasChild("Name")) {
+            name = root.getChild("Name").getString();
+        }
 
-            for (const auto& [uuidStr, dataNode] : children) {
-                uint64_t uuidValue = std::stoull(uuidStr);
+        UUID shaderHandle = UUID();
+        if (root.hasChild("Shader")) {
+            shaderHandle = UUID(std::stoull(root.getChild("Shader").getString()));
+        }
 
-                const auto& assetData = dataNode.getChildren();
-                std::string rawPath = assetData.at("FilePath").getString();
-                AssetType type = static_cast<AssetType>(assetData.at("Type").getInt());
+        if (!shaderHandle.isValid()) {
+            AX_CORE_LOG_ERROR("Material {} is missing a valid Shader UUID!", path.generic_string());
+            // return nullptr;
+        }
 
-                std::string cacheString = std::filesystem::path(rawPath).lexically_normal().generic_string();
+        auto material = std::make_shared<MaterialAsset>(uuid, name, shaderHandle, nullptr);
 
-                AssetMetadata meta;
-                meta.filePath = std::filesystem::path(cacheString);
-                meta.type = type;
-
-                registry[UUID(uuidValue)] = meta;
-                assetHandles[cacheString] = UUID(uuidValue);
+        if (root.hasChild("AlbedoColor")) {
+            const auto& colorArray = root.getChild("AlbedoColor").getArrayElements();
+            if (colorArray.size() >= 4) {
+                material->setAlbedoColor(Color(colorArray[0].getFloat(), colorArray[1].getFloat(), colorArray[2].getFloat(), colorArray[3].getFloat()));
             }
         }
-    }
 
-    void AssetManager::shutdown() {
-        loadedAssets.clear();
-        assetHandles.clear();
-
-        globalVertexBuffer.reset();
-        globalIndexBuffer.reset();
-
-        JSONValue root;
-        JSONValue assetsNode;
-        for (const auto& [uuid, meta] : registry) {
-            if (!uuid.isValid()) {
-                continue;
-            }
-
-            JSONValue assetNode;
-
-            JSONValue filePathValue;
-            filePathValue.setString(meta.filePath.generic_string());
-            assetNode.setChild("FilePath", filePathValue);
-
-            JSONValue typeValue;
-            typeValue.setInt(static_cast<int>(meta.type));
-            assetNode.setChild("Type", typeValue);
-
-            assetsNode.setChild(std::to_string(uuid), assetNode);
+        if (root.hasChild("Metallic")) {
+            material->setMetallic(root.getChild("Metallic").getFloat());
         }
 
-        root.setChild("Assets", assetsNode);
-        FileSystem::writeFile("Assets/AssetManifest.json", JSONSerializer::serialize(root));
+        if (root.hasChild("Roughness")) {
+            material->setRoughness(root.getChild("Roughness").getFloat());
+        }
 
-        registry.clear();
+        if (root.hasChild("Emission")) {
+            material->setEmission(root.getChild("Emission").getFloat());
+        }
+
+        if (root.hasChild("UVTiling")) {
+            const auto& uvArray = root.getChild("UVTiling").getArrayElements();
+            if (uvArray.size() >= 2) {
+                material->setUvTiling(Math::Vec2(uvArray[0].getFloat(), uvArray[1].getFloat()));
+            }
+        }
+
+        if (root.hasChild("AlbedoMap")) {
+            material->setAlbedoMap(UUID(std::stoull(root.getChild("AlbedoMap").getString())));
+        }
+        if (root.hasChild("NormalMap")) {
+            material->setNormalMap(UUID(std::stoull(root.getChild("NormalMap").getString())));
+        }
+        if (root.hasChild("MetallicRoughnessMap")) {
+            material->setMetallicRoughnessMap(UUID(std::stoull(root.getChild("MetallicRoughnessMap").getString())));
+        }
+
+        return material;
     }
 } // namespace Axiom

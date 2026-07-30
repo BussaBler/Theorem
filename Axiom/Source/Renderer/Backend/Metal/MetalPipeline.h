@@ -8,8 +8,6 @@ namespace Axiom {
         MetalPipeline(const CreateInfo& createInfo, MTL::Device* device);
         ~MetalPipeline() override;
 
-        std::unique_ptr<ResourceSet> createResourceSet(ResourceLayout* resourceLayout) override;
-
         inline MTL::RenderPipelineState* getHandle() const { return pipelineState; }
         inline MTL::Winding getFaceWinding() const { return faceWinding; }
         inline MTL::CullMode getCullMode() const { return cullMode; }
@@ -25,6 +23,5 @@ namespace Axiom {
         MTL::TriangleFillMode fillMode;
         MTL::PrimitiveType primitiveType;
         MTL::DepthStencilState* depthStencilState;
-        std::unordered_map<ResourceLayout*, MTL::ArgumentEncoder*> argumentEncoders;
     };
 } // namespace Axiom

@@ -51,15 +51,6 @@ namespace Axiom {
 
     class Texture {
       public:
-        Texture() = default;
-        virtual ~Texture() = default;
-
-        virtual Format getFormat() const = 0;
-        virtual Math::iVec2 getSize() const = 0;
-        virtual uint32_t getMipLevels() const = 0;
-        virtual uint32_t getArrayLayers() const = 0;
-
-      public:
         struct CreateInfo {
             uint32_t width = 0;
             uint32_t height = 0;
@@ -71,6 +62,11 @@ namespace Axiom {
             TextureState initialState = TextureState::Undefined;
             MemoryUsage memoryUsage = MemoryUsage::GPUOnly;
             TextureType type = TextureType::Texture2D;
+
+            bool operator==(const CreateInfo& other) {
+                return width == other.width && height == other.height && mipLevels == other.mipLevels && arrayLayers == other.arrayLayers &&
+                       format == other.format && usage == other.usage && aspect == other.aspect && memoryUsage == other.memoryUsage && type == other.type;
+            }
         };
 
         struct Barrier {
@@ -84,5 +80,22 @@ namespace Axiom {
             uint32_t baseArrayLayer = 0;
             uint32_t arrayLayerCount = 1;
         };
+
+      public:
+        Texture(const CreateInfo& createInfo) : createInfo(createInfo) {}
+        virtual ~Texture() = default;
+
+        const CreateInfo& getCreateInfo() { return createInfo; }
+        TextureState getCurrentState() { return currentState; }
+        void setCurrentState(TextureState newState) { currentState = newState; }
+
+        virtual Format getFormat() const = 0;
+        virtual Math::iVec2 getSize() const = 0;
+        virtual uint32_t getMipLevels() const = 0;
+        virtual uint32_t getArrayLayers() const = 0;
+
+      protected:
+        CreateInfo createInfo;
+        TextureState currentState = TextureState::Undefined;
     };
 } // namespace Axiom

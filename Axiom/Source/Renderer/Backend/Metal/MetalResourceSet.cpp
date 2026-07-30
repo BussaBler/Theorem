@@ -2,16 +2,56 @@
 
 #include "MetalResourceSet.h"
 
+#include "Metal/Metal.hpp"
 #include "MetalBuffer.h"
 #include "MetalSampler.h"
 #include "MetalTexture.h"
+#include "Renderer/Backend/Metal/MetalResourceLayout.h"
+#include "Renderer/ResourceLayout.h"
 
 namespace Axiom {
-    MetalResourceSet::MetalResourceSet(ResourceLayout* layout, MTL::Device* device, MTL::ArgumentEncoder* argumentEncoder) {
-        this->argumentEncoder = argumentEncoder->retain();
-        NS::UInteger argumentBufferLength = argumentEncoder->encodedLength();
-        this->argumentBuffer = device->newBuffer(argumentBufferLength, MTL::ResourceStorageModeShared);
-        this->argumentEncoder->setArgumentBuffer(this->argumentBuffer, 0);
+    MetalResourceSet::MetalResourceSet(const ResourceLayout* layout, MTL::Device* device) {
+        const MetalResourceLayout* mtlLayout = static_cast<const MetalResourceLayout*>(layout);
+        std::vector<NS::Object*> descriptors;
+        descriptors.reserve(mtlLayout->getBindingsCreateInfo().size());
+
+        for (const auto& binding : mtlLayout->getBindingsCreateInfo()) {
+            MTL::ArgumentDescriptor* argDescriptor = MTL::ArgumentDescriptor::argumentDescriptor();
+
+            argDescriptor->setIndex(binding.binding);
+            argDescriptor->setArrayLength(binding.count);
+
+            switch (binding.type) {
+            case ResourceType::UniformBuffer:
+                argDescriptor->setDataType(MTL::DataTypePointer);
+                argDescriptor->setAccess(MTL::BindingAccessReadOnly);
+                break;
+            case ResourceType::StorageBuffer:
+                argDescriptor->setDataType(MTL::DataTypePointer);
+                argDescriptor->setAccess(MTL::BindingAccessReadWrite);
+                break;
+            case ResourceType::Texture:
+                argDescriptor->setDataType(MTL::DataTypeTexture);
+                argDescriptor->setAccess(MTL::BindingAccessReadOnly);
+                argDescriptor->setTextureType(MTL::TextureType2D);
+                break;
+            case ResourceType::Sampler:
+                argDescriptor->setDataType(MTL::DataTypeSampler);
+                argDescriptor->setAccess(MTL::BindingAccessReadOnly);
+                break;
+            case ResourceType::CombinedTextureSampler:
+                break;
+            }
+            descriptors.push_back(argDescriptor);
+        }
+
+        NS::Array* nsDescriptorsArray = NS::Array::array(descriptors.data(), descriptors.size());
+
+        argumentEncoder = device->newArgumentEncoder(nsDescriptorsArray);
+
+        NS::UInteger argumentBufferSize = argumentEncoder->encodedLength();
+        argumentBuffer = device->newBuffer(argumentBufferSize, MTL::ResourceStorageModeShared);
+        argumentEncoder->setArgumentBuffer(argumentBuffer, 0);
     }
 
     MetalResourceSet::~MetalResourceSet() {

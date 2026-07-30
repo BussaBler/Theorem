@@ -3,6 +3,7 @@
 #include "Application.h"
 
 #include "Profiler.h"
+#include "Renderer/RenderGraph.h"
 
 namespace Axiom {
     Application* Application::instance = nullptr;
@@ -32,6 +33,7 @@ namespace Axiom {
         Locator::provideUIRenderer(uiRenderer.get());
 
         ComponentReflection::init();
+        renderer->initPipelines();
     }
 
     Application::~Application() {
@@ -152,13 +154,18 @@ namespace Axiom {
 
             uiRenderer->beginFrame();
             for (const auto& layer : layerStack) {
+                // TODO: add a delta time input parameter
                 layer->onUIRender();
             }
 
-            CommandBuffer* commandBuffer = renderer->beginFrame();
+            renderGraph.begin();
+            renderer->getForwardRenderPipeline()->beginFrame();
             for (const auto& layer : layerStack) {
-                layer->onRender(commandBuffer);
+                layer->onRender(renderGraph);
             }
+
+            CommandBuffer* commandBuffer = renderer->beginFrame();
+            renderGraph.execute(commandBuffer);
             uiRenderer->onRender(commandBuffer, renderer->getCurrentRenderTarget());
             renderer->endFrame();
 

@@ -44,7 +44,7 @@ namespace Axiom {
             break;
         case JSONValueType::Array:
             result += "[\n";
-            for (const auto& element : node.getElements()) {
+            for (const auto& element : node.getArrayElements()) {
                 result += indentChild + serialize(element, indentLevel + 1) + ",\n";
             }
             result.pop_back();

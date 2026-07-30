@@ -19,7 +19,7 @@ namespace Math {
     constexpr float SQRT3 = 1.73205080756887729352f; // sqrt(3)
 
     constexpr float INF = std::numeric_limits<float>::infinity();
-    constexpr float EPSILON = 1e-6f;
+    constexpr float EPSILON = std::numeric_limits<float>::epsilon();
 
     // ------- Axiom Math functions -------
     float sin(float radians);

@@ -7,6 +7,7 @@ layout (location = 1) in vec2 aUv;
 layout (location = 2) in vec4 aColor;
 layout (location = 3) in vec4 aData; // (x, y) = size
 layout (location = 4) in vec4 aRadii;
+
 layout(push_constant, std430) uniform PushConstants {
     mat4 proj;
 };

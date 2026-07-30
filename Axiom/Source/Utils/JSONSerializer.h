@@ -49,7 +49,7 @@ namespace Axiom {
         inline const JSONValue& getChild(const std::string& key) const { return children.at(key); }
 
         inline const std::unordered_map<std::string, JSONValue>& getChildren() const { return children; }
-        inline const std::vector<JSONValue>& getElements() const { return elements; }
+        inline const std::vector<JSONValue>& getArrayElements() const { return elements; }
 
       private:
         JSONValueType type;

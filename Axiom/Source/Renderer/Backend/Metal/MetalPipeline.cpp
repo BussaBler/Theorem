@@ -3,10 +3,8 @@
 #include "MetalPipeline.h"
 
 #include "Core/Assert.h"
-#include "MetalResourceLayout.h"
-#include "MetalResourceSet.h"
+#include "Metal/Metal.hpp"
 #include "MetalShader.h"
-#include "Utils/FileSystem.h"
 
 namespace Axiom {
     MetalPipeline::MetalPipeline(const CreateInfo& createInfo, MTL::Device* device) : device(device) {
@@ -89,60 +87,16 @@ namespace Axiom {
         AX_CORE_ASSERT(error == nullptr, "Failed to create render pipeline state: {}", error->localizedDescription()->utf8String());
         AX_CORE_ASSERT(pipelineState, "Failed to create render pipeline state");
 
-        NS::Array* vertexArguments = reflection->vertexArguments();
-        NS::Array* fragmentArguments = reflection->fragmentArguments();
-
-        auto hasBufferIndex = [](NS::Array* arguments, uint32_t index) {
-            for (size_t i = 0; i < arguments->count(); i++) {
-                MTL::Argument* arg = static_cast<MTL::Argument*>(arguments->object(i));
-                if (arg->type() == MTL::ArgumentTypeBuffer && arg->index() == index) {
-                    return true;
-                }
-            }
-            return false;
-        };
-
-        uint32_t resourceIndex = 8; // index 0 to 3 is for vertex buffer, 4 is push constants, 5 to 7 are for padding, so start at 8 for global resources
-        for (size_t i = 0; i < createInfo.resourceLayouts.size(); i++) {
-            ResourceLayout* layout = createInfo.resourceLayouts[i];
-            MTL::ArgumentEncoder* encoder = nullptr;
-
-            if (hasBufferIndex(vertexArguments, resourceIndex)) {
-                encoder = vertexFunction->newArgumentEncoder(resourceIndex);
-            } else if (hasBufferIndex(fragmentArguments, resourceIndex)) {
-                encoder = fragmentFunction->newArgumentEncoder(resourceIndex);
-            }
-
-            if (encoder) {
-                argumentEncoders[layout] = encoder;
-            } else {
-                AX_CORE_LOG_WARN("ResourceLayout at global index {} was optimized out of both shader stages.", resourceIndex);
-            }
-
-            resourceIndex++;
-        }
-
         pipelineDescriptor->release();
         vertexFunction->release();
         fragmentFunction->release();
     }
 
     MetalPipeline::~MetalPipeline() {
-        for (auto& pair : argumentEncoders) {
-            pair.second->release();
-        }
-        argumentEncoders.clear();
         if (pipelineState) {
             depthStencilState->release();
             pipelineState->release();
             pipelineState = nullptr;
         }
-    }
-
-    std::unique_ptr<ResourceSet> MetalPipeline::createResourceSet(ResourceLayout* resourceLayout) {
-        auto it = argumentEncoders.find(resourceLayout);
-        AX_CORE_ASSERT(it != argumentEncoders.end(), "Resource layout not found in pipeline's argument encoders");
-
-        return std::make_unique<MetalResourceSet>(resourceLayout, device, it->second);
     }
 } // namespace Axiom

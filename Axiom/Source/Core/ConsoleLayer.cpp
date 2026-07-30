@@ -3,6 +3,7 @@
 #include "ConsoleLayer.h"
 
 #include "CommandRegistry.h"
+#include "Renderer/RenderGraph.h"
 #include "UI/Elements/UIPanel.h"
 #include "UI/Elements/UIText.h"
 #include "UI/Elements/UITextInput.h"
@@ -67,6 +68,10 @@ namespace Axiom {
             uiRoot->arrange(mainUiContext, Math::Vec2(0, winSize.y() * (1.0f - CONSOLE_HEIGHT_RATIO)),
                             Math::Vec2(winSize.x(), winSize.y() * CONSOLE_HEIGHT_RATIO));
         }
+        if (shouldRefreshHistory) {
+            refreshConsoleHistory();
+            shouldRefreshHistory = false;
+        }
     }
 
     void ConsoleLayer::onEvent(Event& event) {
@@ -91,11 +96,7 @@ namespace Axiom {
         }
     }
 
-    void ConsoleLayer::onRender(CommandBuffer* commandBuffer) {
-        if (shouldRefreshHistory) {
-            refreshConsoleHistory();
-            shouldRefreshHistory = false;
-        }
+    void ConsoleLayer::onRender(RenderGraph& rendeGraph) {
     }
 
     void ConsoleLayer::refreshConsoleHistory() {

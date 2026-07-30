@@ -1,8 +1,10 @@
 #include "VulkanTexture.h"
 
+#include "Renderer/Texture.h"
+
 namespace Axiom {
     VulkanTexture::VulkanTexture(Vk::Device logicalDevice, const CreateInfo& createInfo)
-        : device(logicalDevice), ownsImage(true), size(createInfo.width, createInfo.height) {
+        : Texture(createInfo), device(logicalDevice), ownsImage(true), size(createInfo.width, createInfo.height) {
         mipLevels = createInfo.mipLevels;
         arrayLayers = createInfo.arrayLayers;
 

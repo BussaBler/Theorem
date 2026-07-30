@@ -2,8 +2,10 @@
 
 #include "MetalTexture.h"
 
+#include "Renderer/Texture.h"
+
 namespace Axiom {
-    MetalTexture::MetalTexture(const CreateInfo& createInfo, MTL::Device* device) : size(createInfo.width, createInfo.height) {
+    MetalTexture::MetalTexture(const CreateInfo& createInfo, MTL::Device* device) : Texture(createInfo), size(createInfo.width, createInfo.height) {
         format = createInfo.format;
         mipLevels = createInfo.mipLevels;
         arrayLayers = createInfo.arrayLayers;
@@ -26,7 +28,7 @@ namespace Axiom {
         metalTexture = device->newTexture(descriptor);
     }
 
-    MetalTexture::MetalTexture(MTL::Texture* texture) : metalTexture(texture) {
+    MetalTexture::MetalTexture(MTL::Texture* texture) : Texture({}), metalTexture(texture) {
         if (metalTexture) {
             metalTexture->retain();
             format = metalToAxPixelFormat(metalTexture->pixelFormat());

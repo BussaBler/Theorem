@@ -9,6 +9,7 @@
 #include "Locator.h"
 #include "Log.h"
 #include "Math/AxMath.h"
+#include "Renderer/RenderGraph.h"
 #include "Renderer/Renderer.h"
 #include "Scene/Components/ComponentReflection.h"
 #include "UI/UIRenderer.h"
@@ -84,6 +85,7 @@ namespace Axiom {
         bool running = true;
         LayerStack layerStack;
         std::vector<LayerAction> layerActionQueue;
+        RenderGraph renderGraph{};
 
       private:
         static Application* instance;

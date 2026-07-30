@@ -1,4 +1,5 @@
 #include "axpch.h"
+
 #define NS_PRIVATE_IMPLEMENTATION
 #define CA_PRIVATE_IMPLEMENTATION
 #define MTL_PRIVATE_IMPLEMENTATION
@@ -76,6 +77,10 @@ namespace Axiom {
 
     std::unique_ptr<ResourceLayout> MetalDevice::createResourceLayout(const std::vector<ResourceLayout::BindingCreateInfo>& bindings) {
         return std::make_unique<MetalResourceLayout>(bindings);
+    }
+
+    std::unique_ptr<ResourceSet> MetalDevice::createResourceSet(const ResourceLayout* resourceLayout) {
+        return std::make_unique<MetalResourceSet>(resourceLayout, metalDevice);
     }
 
     bool MetalDevice::beginFrame(SwapChain* swapChain) {

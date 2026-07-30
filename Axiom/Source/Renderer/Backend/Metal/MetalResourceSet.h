@@ -5,7 +5,7 @@
 namespace Axiom {
     class MetalResourceSet : public ResourceSet {
       public:
-        MetalResourceSet(ResourceLayout* layout, MTL::Device* device, MTL::ArgumentEncoder* argumentEncoder);
+        MetalResourceSet(const ResourceLayout* layout, MTL::Device* device);
         ~MetalResourceSet() override;
 
         void update(const std::vector<Binding>& bindings) override;

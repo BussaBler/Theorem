@@ -1,9 +1,6 @@
 #pragma once
-#include "Axiom.h"
 #include "EditorCamera.h"
-#include <string>
-#include <format>
-#include <memory>
+#include "Axiom.h"
 
 class EditorLayer : public Axiom::Layer {
   public:
@@ -15,7 +12,7 @@ class EditorLayer : public Axiom::Layer {
     void onUpdate() override;
     void onUIRender() override;
     void onEvent(Axiom::Event& event) override;
-    void onRender(Axiom::CommandBuffer* commandBuffer) override;
+    void onRender(Axiom::RenderGraph& commandBuffer) override;
 
   private:
     void refreshHierarchyPanel();
@@ -41,7 +38,6 @@ class EditorLayer : public Axiom::Layer {
     Math::uVec2 viewportSize{0, 0};
     std::shared_ptr<Axiom::TextureAsset> textureAsset;
     std::shared_ptr<Axiom::Scene> scene;
-    std::unique_ptr<Axiom::SceneRenderer> sceneRenderer;
     std::vector<std::shared_ptr<Axiom::Texture>> sceneTextures;
     std::vector<std::shared_ptr<Axiom::Texture>> depthTextures;
     std::unique_ptr<EditorCamera> editorCamera;

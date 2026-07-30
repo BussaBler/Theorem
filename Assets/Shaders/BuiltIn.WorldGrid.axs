@@ -4,13 +4,13 @@
 
 const float GRID_SIZE = 5000.0;
 const vec3 vertices[6] = vec3[](
-    vec3(-1.0, 0.0, -1.0), vec3(1.0, 0.0, -1.0), vec3(1.0, 0.0, 1.0),
-    vec3(-1.0, 0.0, 1.0), vec3(-1.0, 0.0, -1.0), vec3(1.0, 0.0, 1.0)
-);
+        vec3(-1.0, 0.0, -1.0), vec3(1.0, 0.0, -1.0), vec3(1.0, 0.0, 1.0),
+        vec3(-1.0, 0.0, 1.0), vec3(-1.0, 0.0, -1.0), vec3(1.0, 0.0, 1.0)
+    );
 
 layout(set = 0, binding = 0) uniform GlobalData {
-    mat4 uProjection;
     mat4 uView;
+    mat4 uProjection;
     vec4 uCameraPosition;
 
     vec4 uAmbientColor;
@@ -22,12 +22,12 @@ layout(location = 0) out vec3 vWorldPosition;
 
 void main() {
     vec3 localPos = vertices[gl_VertexIndex] * GRID_SIZE;
-    
+
     vec3 worldPos = localPos;
     worldPos.x += globalData.uCameraPosition.x;
     worldPos.z += globalData.uCameraPosition.z;
     vWorldPosition = worldPos;
-    
+
     gl_Position = globalData.uProjection * globalData.uView * vec4(worldPos, 1.0);
 }
 
@@ -62,7 +62,7 @@ float drawGrid(vec2 coord, float spacing) {
 void main() {
     float minorGrid = drawGrid(vWorldPosition.xz, 1.0);
     float majorGrid = drawGrid(vWorldPosition.xz, 10.0);
-    
+
     vec4 gridColor = vec4(0.0, 0.0, 0.0, 0.3 * minorGrid);
     gridColor = mix(gridColor, vec4(0.0, 0.0, 0.0, 0.8 * majorGrid), majorGrid);
 
@@ -70,11 +70,11 @@ void main() {
     vec2 dWidth = fwidth(coord);
 
     if (abs(coord.y) < dWidth.y * 1.5) {
-        gridColor.rgb = vec3(0.9, 0.2, 0.2); 
+        gridColor.rgb = vec3(0.9, 0.2, 0.2);
         gridColor.a = max(gridColor.a, 0.9);
     }
     if (abs(coord.x) < dWidth.x * 1.5) {
-        gridColor.rgb = vec3(0.2, 0.2, 0.9); 
+        gridColor.rgb = vec3(0.2, 0.2, 0.9);
         gridColor.a = max(gridColor.a, 0.9);
     }
 

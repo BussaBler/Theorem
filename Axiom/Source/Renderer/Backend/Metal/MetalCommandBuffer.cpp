@@ -7,6 +7,8 @@
 #include "MetalResourceSet.h"
 #include "MetalTexture.h"
 
+#include <cstdint>
+
 namespace Axiom {
     MetalCommandBuffer::MetalCommandBuffer(MTL::CommandQueue* commandQueue) : commandQueue(commandQueue) {
     }
@@ -28,7 +30,7 @@ namespace Axiom {
         for (uint32_t i = 0; i < renderPass.colorAttachmentCount; i++) {
             const RenderAttachment& colorAttachment = renderPass.colorAttachments[i];
             MTL::RenderPassColorAttachmentDescriptor* colorAttachmentDescriptor = renderPassDescriptor->colorAttachments()->object(i);
-            colorAttachmentDescriptor->setTexture(static_cast<MetalTexture*>(colorAttachment.texture)->getHandle());
+            colorAttachmentDescriptor->setTexture(static_cast<const MetalTexture*>(colorAttachment.texture)->getHandle());
             colorAttachmentDescriptor->setLoadAction(axToMetalLoadAction(colorAttachment.loadOp));
             colorAttachmentDescriptor->setStoreAction(axToMetalStoreAction(colorAttachment.storeOp));
             colorAttachmentDescriptor->setClearColor(MTL::ClearColor{colorAttachment.clearColor.x(), colorAttachment.clearColor.y(),
@@ -38,7 +40,7 @@ namespace Axiom {
         if (renderPass.hasDepthAttachment) {
             const RenderAttachment& depthAttachment = renderPass.depthAttachment;
             MTL::RenderPassDepthAttachmentDescriptor* depthAttachmentDescriptor = renderPassDescriptor->depthAttachment();
-            depthAttachmentDescriptor->setTexture(static_cast<MetalTexture*>(depthAttachment.texture)->getHandle());
+            depthAttachmentDescriptor->setTexture(static_cast<const MetalTexture*>(depthAttachment.texture)->getHandle());
             depthAttachmentDescriptor->setLoadAction(axToMetalLoadAction(depthAttachment.loadOp));
             depthAttachmentDescriptor->setStoreAction(axToMetalStoreAction(depthAttachment.storeOp));
             depthAttachmentDescriptor->setClearDepth(depthAttachment.clearDepth);

@@ -3,12 +3,14 @@
 #include "CommandBuffer.h"
 #include "Core/Window.h"
 #include "Pipeline.h"
+#include "Renderer/ResourceLayout.h"
 #include "ResourceSet.h"
 #include "Sampler.h"
 #include "SwapChain.h"
 #include "Texture.h"
 
 #include <memory>
+#include <vector>
 
 namespace Axiom {
     enum class GraphicsApi { Vulkan, DirectX12, Metal };
@@ -46,6 +48,7 @@ namespace Axiom {
         virtual std::unique_ptr<Texture> createTexture(const Texture::CreateInfo& textureCreateInfo) = 0;
         virtual std::unique_ptr<Sampler> createSampler(const Sampler::CreateInfo& samplerCreateInfo) = 0;
         virtual std::unique_ptr<ResourceLayout> createResourceLayout(const std::vector<ResourceLayout::BindingCreateInfo>& bindings) = 0;
+        virtual std::unique_ptr<ResourceSet> createResourceSet(const ResourceLayout* resourceLayout) = 0;
         virtual bool beginFrame(SwapChain* swapChain) = 0;
         virtual CommandBuffer* getCurrentCommandBuffer() = 0;
         virtual std::unique_ptr<CommandBuffer> beginSingleTimeCommands() = 0;

@@ -4,6 +4,9 @@
 #include "RenderPass.h"
 #include "ResourceSet.h"
 
+#include <cstdint>
+#include <vector>
+
 namespace Axiom {
     class CommandBuffer {
       public:

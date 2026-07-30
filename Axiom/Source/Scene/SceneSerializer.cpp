@@ -113,7 +113,7 @@ namespace Axiom {
         }
 
         const JSONValue& entitiesArray = deserializedData.getChild("Entities");
-        for (const JSONValue& entityNode : entitiesArray.getElements()) {
+        for (const JSONValue& entityNode : entitiesArray.getArrayElements()) {
 
             Entity entity = scene->createEntity("Unnamed");
 

@@ -4,7 +4,7 @@
 #include <string>
 
 namespace Axiom {
-    enum class AssetType { None, Texture, Mesh, Font, Audio, Shader };
+    enum class AssetType { None, Texture, Mesh, Font, Audio, Shader, Material };
 
     class Asset {
       public:

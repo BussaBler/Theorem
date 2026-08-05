@@ -6,25 +6,22 @@ Axiom is a game engine project with an editor application called Theorem. The id
 
 ## Build System
 
-The project uses SCons as its build system. The build script has been designed to automatically detect your host operating system and select the most appropriate compiler and rendering backend by default. 
+The project uses CMake as its build system (minimum version 3.20). The build script automatically detects your host operating system and routes compiled executables and libraries cleanly into `build/Bin/Runtime`, `build/Bin/Shared`, and `build/Bin/Static`.
+
+It is highly recommended to use the **Ninja** build system generator for maximum compilation speed on macOS and Linux, and **Visual Studio** for Windows.
 
 ### Available Configurations
 
-You can customize your build by passing the following arguments to the `scons` command:
+You can customize your build by passing the following arguments to the `cmake` generation command using the `-D` flag:
 
-* **`config`**: Build configuration. Allowed values: `debug`, `release`. *(Default: `debug`)*
-* **`platform`**: Target platform. Allowed values: `windows`, `linux`, `macos`. *(Default: Auto-detected based on your host OS)*
-* **`compiler`**: C++ compiler. Allowed values: `msvc`, `gcc`, `g++`, `clang`. *(Default: `msvc` for Windows, `clang` for macOS, `gcc` for Linux)*
-* **`renderer`**: Graphics API backend. Allowed values: `vulkan`, `metal`. *(Default: `metal` for macOS, `vulkan` for Windows/Linux)*
+* **`CMAKE_BUILD_TYPE`**: Build configuration. Allowed values: `Debug`, `Release`. *(Default: `Debug`)*
+* **`AX_RENDERER`**: Graphics API backend. Allowed values: `vulkan`, `dx12`, `metal`. *(Default: `vulkan`)*
+* **`AX_COMPILER`**: Specify the compiler toolchain. Allowed values: `msvc`, `gcc`, `g++`, `clang`. *(Note: CMake automatically detects your host's native compiler by default).*
 
 ### Build Flags
 
-* **`vsproj`**: Generates Visual Studio project and solution files (`yes`/`no`). Note: This requires the MSVC compiler. *(Default: `no`)*
-* **`verbose`**: Prints the full, raw command lines used during compilation instead of the formatted output (`yes`/`no`). *(Default: `no`)*
-* **`no-color`**: Disables colored terminal output (`yes`/`no`). *(Default: `no`)*
-* **`-j N`**: Standard SCons flag to run `N` parallel compilation jobs (e.g., `-j 8`). By default, the script will automatically utilize all available CPU cores.
-* **`-c`**: Standard SCons flag to clean the build directory.
-* **`-h` / `--help`**: Displays the built-in help menu outlining all available commands and current defaults.
+* **`AX_VERBOSE`**: Enable verbose output to see raw command lines during compilation (`-DAX_VERBOSE=ON`).
+* **`AX_NO_COLOR`**: Disable colored terminal output (`-DAX_NO_COLOR=ON`).
 
 > [!NOTE]  
 > Currently the font renderer only supports fonts that do not contain self-intersecting outlines. If you notice rendering issues on fonts downloaded from websites such as Google Fonts, try downloading the font from the font author's official website instead.
@@ -34,25 +31,13 @@ You can customize your build by passing the following arguments to the `scons` c
 
 ### Example Build Commands
 
-**Windows:**
-Build a standard Debug version and generate Visual Studio project files (relies on defaults for platform, MSVC compiler, and Vulkan):
-```bash
-scons vsproj=yes
-```
+The standard CMake workflow is a two-step process: **Configure** (generate the build files) and **Build** (compile the code).
 
-**macOS:**
-Build a Release version using Clang and the Metal backend:
+**macOS (Using Ninja):**
+Build a Debug version using the Metal backend.
 ```bash
-scons config=release platform=macos compiler=clang renderer=metal
-```
+# 1. Configure the project
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DAX_RENDERER=metal
 
-**Linux:**
-Build a Debug version using GCC with colored output disabled:
-```bash
-scons config=debug platform=linux compiler=gcc no-color=yes
-```
-
-**Clean Build Directory:**
-```bash
-scons -c
-```
+# 2. Compile the engine
+cmake --build build

@@ -3,7 +3,9 @@
 #include "MetalShader.h"
 
 #include <SpirvCross/spirv_msl.hpp>
+#include <cstdint>
 #include <shaderc/shaderc.hpp>
+#include <vector>
 
 namespace Axiom {
     MetalShader::MetalShader(const std::string& vertexSource, const std::string& fragmentSource, MTL::Device* device) {
@@ -71,18 +73,22 @@ namespace Axiom {
 
         spirv_cross::ShaderResources resources = mslCompiler.get_shader_resources();
         uint32_t metalBufferOffset = 8;
-        // uint32_t currentMetalId = 0;
+        std::vector<uint32_t> mappedSets;
+
         auto mapDescriptorSets = [&](const spirv_cross::SmallVector<spirv_cross::Resource>& resources) {
             for (const auto& resource : resources) {
-                spirv_cross::SPIRType type = mslCompiler.get_type(resource.type_id);
-                uint32_t arraySize = 1;
-                if (type.array.size() > 0) {
-                    arraySize = type.array.size();
-                }
                 uint32_t set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-                mslCompiler.set_decoration(resource.id, spv::DecorationDescriptorSet, metalBufferOffset + set);
-                // mslCompiler.set_decoration(resource.id, spv::DecorationBinding, currentMetalId);
-                // currentMetalId += arraySize;
+                if (std::find(mappedSets.begin(), mappedSets.end(), set) == mappedSets.end()) {
+                    spirv_cross::MSLResourceBinding argBinding = {};
+                    argBinding.stage = executionModel;
+                    argBinding.desc_set = set;
+
+                    argBinding.binding = spirv_cross::kArgumentBufferBinding;
+                    argBinding.msl_buffer = metalBufferOffset + set;
+
+                    mslCompiler.add_msl_resource_binding(argBinding);
+                    mappedSets.push_back(set);
+                }
             }
         };
 

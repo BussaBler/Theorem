@@ -318,8 +318,6 @@ namespace Axiom {
         commandBuffer->bindVertexBuffers({AssetManager::getGlobalVertexBuffer()});
         commandBuffer->bindIndexBuffer(AssetManager::getGlobalIndexBuffer());
 
-        commandBuffer->bindResources({globalDataResourceSet.get(), instanceResourceSet.get()});
-
         UUID currentShader = UUID();
         UUID currentMaterial = UUID();
         UUID currentMesh = UUID();
@@ -378,6 +376,7 @@ namespace Axiom {
                 pipelineCreateInfo.resourceLayouts = {globalDataResourceLayout.get(), instanceResourceLayout.get()};
 
                 commandBuffer->bindPipeline(Locator::getRenderer()->getOrCreatePipeline(pipelineCreateInfo));
+                commandBuffer->bindResources({globalDataResourceSet.get(), instanceResourceSet.get()});
             }
 
             if (cmd.materialAsset->getHandle() != currentMaterial) {

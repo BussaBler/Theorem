@@ -29,7 +29,7 @@ struct MeshInstance {
     mat4 model;
 };
 
-layout(std430, set = 1, binding = 0) readonly buffer InstanceBuffer {
+layout(std430, set = 1, binding = 1) readonly buffer InstanceBuffer {
     MeshInstance instances[];
 };
 

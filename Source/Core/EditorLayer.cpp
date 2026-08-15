@@ -237,21 +237,21 @@ void EditorLayer::onRender(Axiom::RenderGraph& renderGraph) {
     std::shared_ptr<Axiom::Texture> renderTarget = sceneTextures[currentFrameIndex];
     std::shared_ptr<Axiom::Texture> depthTexture = depthTextures[currentFrameIndex];
 
-    Axiom::RenderContext renderView = {.targetScene = scene.get(),
-                                       .viewMatrix = editorCamera->getView(),
-                                       .projectionMatrix = editorCamera->getProjection(),
-                                       .cameraPosition = editorCamera->getPosition(),
-                                       .renderTarget = renderTarget.get(),
-                                       .depthTarget = depthTexture.get(),
-                                       .shouldDrawSkybox = true,
-                                       .shouldDrawGizmos = false,
-                                       .shouldDrawWorldGrid = true};
+    Axiom::RenderContext renderContext = {.targetScene = scene.get(),
+                                          .viewMatrix = editorCamera->getView(),
+                                          .projectionMatrix = editorCamera->getProjection(),
+                                          .cameraPosition = editorCamera->getPosition(),
+                                          .renderTarget = renderTarget.get(),
+                                          .depthTarget = depthTexture.get(),
+                                          .shouldDrawSkybox = true,
+                                          .shouldDrawGizmos = false,
+                                          .shouldDrawWorldGrid = true};
     if (selectedEntity) {
-        renderView.shouldDrawGizmos = true;
-        renderView.gizmosPosition = selectedEntity.getComponent<Axiom::TransformComponent>().position;
+        renderContext.shouldDrawGizmos = true;
+        renderContext.gizmosPosition = selectedEntity.getComponent<Axiom::TransformComponent>().position;
     }
 
-    Axiom::Locator::getRenderer()->getForwardRenderPipeline()->render(renderGraph, renderView);
+    Axiom::Locator::getRenderer()->getFRP()->render(renderGraph, renderContext);
 
     viewportImage->setTexture(renderTarget);
 }

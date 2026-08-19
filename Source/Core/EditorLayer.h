@@ -1,6 +1,6 @@
 #pragma once
 #include "EditorCamera.h"
-#include "Axiom.h"
+#include <Axiom.h>
 
 class EditorLayer : public Axiom::Layer {
   public:

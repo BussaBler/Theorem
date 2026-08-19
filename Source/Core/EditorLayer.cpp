@@ -1,16 +1,10 @@
 #include "EditorLayer.h"
 
-#include "Asset/Asset.h"
 #include "Asset/AssetManager.h"
-#include "Core/Locator.h"
-#include "Renderer/ForwardRenderPipeline.h"
-#include "Renderer/RenderGraph.h"
-#include "Renderer/RenderPipeline.h"
-#include "Scene/Components/TransformComponent.h"
+#include "Project.h"
+#include "Utils/FileSystem.h"
 
-#include <memory>
-
-EditorLayer::EditorLayer() : Layer("EditorLayer") {
+EditorLayer::EditorLayer() : Axiom::Layer("EditorLayer") {
 }
 
 void EditorLayer::onAttach() {
@@ -81,12 +75,18 @@ void EditorLayer::onAttach() {
     rightPanel->addChild(inspectorPanel);
 
     scene = std::make_shared<Axiom::Scene>();
-    Axiom::SceneSerializer deserializer(scene.get());
-    if (!deserializer.deserialize("Assets/Scenes/scene.json")) {
-        Axiom::AX_LOG_ERROR("Failed to deserialize the scene");
+    Axiom::SceneSerializer sceneSerializer(scene.get());
+    ProjectConfig projectConfig = Project::getActive()->getConfig();
+
+    if (Axiom::FileSystem::exists(projectConfig.startScene)) {
+        if (!sceneSerializer.deserialize(projectConfig.startScene)) {
+            Axiom::AX_LOG_ERROR("Failed to deserialize the project scene");
+        }
+    } else {
+        // TODO: create a default scene
     }
 
-    Axiom::UUID textureHandle = Axiom::AssetManager::importAsset("Redstone Block", "Assets/Textures/redstone_block.png", Axiom::AssetType::Texture);
+    Axiom::UUID textureHandle = Axiom::AssetManager::importAsset("Redstone Block", "project://Assets/Textures/redstone_block.png", Axiom::AssetType::Texture);
     textureAsset = Axiom::AssetManager::getAsset<Axiom::TextureAsset>(textureHandle);
 
     Axiom::Texture::CreateInfo createInfo = {
@@ -128,8 +128,13 @@ void EditorLayer::onAttach() {
 }
 
 void EditorLayer::onDetach() {
-    Axiom::SceneSerializer serializer(scene.get());
-    serializer.serialize("Assets/Scenes/scene.json");
+    ProjectConfig projectConfig = Project::getActive()->getConfig();
+    Axiom::SceneSerializer sceneSerializer(scene.get());
+    sceneSerializer.serialize(projectConfig.startScene);
+    Axiom::AssetManager::serializeManifest("project://ProjectManifest.json", "project://");
+    std::string projectFileName = "project://" + projectConfig.name + ".theorem";
+    Project::saveActive(projectFileName);
+
     Axiom::AX_LOG_INFO("EditorLayer detached");
 }
 

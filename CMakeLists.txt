@@ -17,6 +17,7 @@ file(GLOB_RECURSE THEOREM_HEADERS "Source/*.h")
 
 add_executable(Theorem ${THEOREM_SOURCES} ${THEOREM_HEADERS})
 target_link_libraries(Theorem PRIVATE Axiom)
+target_include_directories(Theorem PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
 
 target_compile_definitions(Theorem PRIVATE
   $<$<CONFIG:Debug>:TH_DEBUG>

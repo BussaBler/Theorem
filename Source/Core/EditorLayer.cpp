@@ -1,8 +1,11 @@
 #include "EditorLayer.h"
 
-#include "Asset/AssetManager.h"
 #include "Project.h"
-#include "Utils/FileSystem.h"
+#include "UI/InspectorUI.h"
+
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 
 EditorLayer::EditorLayer() : Axiom::Layer("EditorLayer") {
 }
@@ -151,14 +154,6 @@ void EditorLayer::onUpdate() {
         refreshInspectorPanel();
         shouldRefreshInspector = false;
     }
-    if (shouldDeleteContextMenu) {
-        contextMenu = nullptr;
-        shouldDeleteContextMenu = false;
-    }
-    if (shouldDeleteAssetPicker) {
-        assetPickerMenu = nullptr;
-        shouldDeleteAssetPicker = false;
-    }
     refreshProfilerPanel();
     uiRoot->arrange(mainUiContext, Math::Vec2(0, 0), Math::Vec2(winWidth, winHeight));
 }
@@ -167,72 +162,28 @@ void EditorLayer::onUIRender() {
     mainUiContext.renderer->pushScissorRect({{0, 0}, {Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight()}}, mainUiContext.layer);
     uiRoot->onRender(mainUiContext, Math::Rect({0, 0}, {Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight()}));
 
-    if (contextMenu) {
-        mainUiContext.layer = 1;
-        mainUiContext.renderer->pushScissorRect({{0, 0}, {Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight()}},
-                                                mainUiContext.layer);
-        contextMenu->onRender(mainUiContext, Math::Rect({0, 0}, {Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight()}));
-        mainUiContext.renderer->popScissorRect(mainUiContext.layer);
-        mainUiContext.layer = 0;
-    }
-    if (assetPickerMenu) {
-        mainUiContext.layer = 1;
-        mainUiContext.renderer->pushScissorRect({{0, 0}, {Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight()}},
-                                                mainUiContext.layer);
-        assetPickerMenu->onRender(mainUiContext, Math::Rect({0, 0}, {Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight()}));
-        mainUiContext.renderer->popScissorRect(mainUiContext.layer);
-        mainUiContext.layer = 0;
-    }
     mainUiContext.renderer->popScissorRect(mainUiContext.layer);
 }
 
 void EditorLayer::onEvent(Axiom::Event& event) {
     Axiom::EventDispatcher dispatcher(event);
 
-    dispatcher.dispatch<Axiom::MouseMovedEvent>([this](const Axiom::MouseMovedEvent& e) {
-        lastMousePos = {e.getMouseX(), e.getMouseY()};
-        return false;
-    });
-
     dispatcher.dispatch<Axiom::MouseButtonPressedEvent>([this](const Axiom::MouseButtonPressedEvent& e) {
         if (e.getMouseButton() == Axiom::KeyCode::RightButton) {
             auto bounds = hierarchyPanel->getArrangedPosition();
             auto size = hierarchyPanel->getArrangedSize();
+            float mouseX = e.getMouseX();
+            float mouseY = e.getMouseY();
 
-            if (lastMousePos.x() >= bounds.x() && lastMousePos.x() <= bounds.x() + size.x() && lastMousePos.y() >= bounds.y() &&
-                lastMousePos.y() <= bounds.y() + size.y()) {
-                spawnHierarchyContextMenu();
+            if (mouseX >= bounds.x() && mouseX <= bounds.x() + size.x() && mouseY >= bounds.y() && mouseY <= bounds.y() + size.y()) {
+                spawnHierarchyContextMenu(Math::Vec2(mouseX, mouseY));
                 return true;
-            }
-        }
-        if (e.getMouseButton() == Axiom::KeyCode::LeftButton) {
-            if (contextMenu) {
-                auto bounds = contextMenu->getArrangedPosition();
-                auto size = contextMenu->getArrangedSize();
-                if (lastMousePos.x() < bounds.x() || lastMousePos.x() > bounds.x() + size.x() || lastMousePos.y() < bounds.y() ||
-                    lastMousePos.y() > bounds.y() + size.y()) {
-                    shouldDeleteContextMenu = true;
-                    return true;
-                }
-            }
-            if (assetPickerMenu) {
-                auto bounds = assetPickerMenu->getArrangedPosition();
-                auto size = assetPickerMenu->getArrangedSize();
-                if (lastMousePos.x() < bounds.x() || lastMousePos.x() > bounds.x() + size.x() || lastMousePos.y() < bounds.y() ||
-                    lastMousePos.y() > bounds.y() + size.y()) {
-                    shouldDeleteAssetPicker = true;
-                    return true;
-                }
             }
         }
         return false;
     });
 
-    if (contextMenu) {
-        event.handled = contextMenu->onEvent(event);
-    } else if (assetPickerMenu) {
-        event.handled = assetPickerMenu->onEvent(event);
-    } else {
+    if (!event.isHandled()) {
         event.handled = uiRoot->onEvent(event);
     }
 }
@@ -263,6 +214,7 @@ void EditorLayer::onRender(Axiom::RenderGraph& renderGraph) {
 
 void EditorLayer::refreshHierarchyPanel() {
     hierarchyPanel->clearChildren();
+    hierarchyButtons.clear();
 
     auto headerRow = std::make_shared<Axiom::UIHorizontalBox>();
     headerRow->setVerticalAlignment(Axiom::UIAlignment::Start);
@@ -293,9 +245,15 @@ void EditorLayer::refreshHierarchyPanel() {
             entityButton->setNormalColor(uiRoot->getTheme()->accentColor);
         }
 
-        entityButton->setOnClick([this, entity]() {
+        hierarchyButtons[entityId] = entityButton;
+
+        entityButton->setOnClick([this, entity, entityId]() {
+            if (selectedEntity && hierarchyButtons.count(selectedEntity.getId())) {
+                hierarchyButtons[selectedEntity.getId()]->setNormalColor(uiRoot->getTheme()->controlNormalColor);
+            }
+
             selectedEntity = entity;
-            shouldRefreshHierarchy = true;
+            hierarchyButtons[entityId]->setNormalColor(uiRoot->getTheme()->accentColor);
             shouldRefreshInspector = true;
         });
         row->addChild(entityButton);
@@ -344,7 +302,10 @@ void EditorLayer::refreshInspectorPanel() {
         nameInput->setValueGetter([capturedEntity]() { return capturedEntity.getComponent<Axiom::TagComponent>().tag; });
         nameInput->setValueSetter([this, capturedEntity](const std::string& v) mutable {
             capturedEntity.getComponent<Axiom::TagComponent>().tag = v;
-            shouldRefreshHierarchy = true;
+            uint32_t id = capturedEntity.getId();
+            if (hierarchyButtons.find(id) != hierarchyButtons.end()) {
+                hierarchyButtons[id]->setText(v);
+            }
         });
         tagRow->addChild(nameInput);
         inspectorPanel->addChild(tagRow);
@@ -362,8 +323,7 @@ void EditorLayer::refreshInspectorPanel() {
         componentGroup->setVerticalAlignment(Axiom::UIAlignment::Start);
 
         for (const auto& field : componentInfo->fields) {
-            void* fieldPtr = static_cast<char*>(dataPtr) + field.offset;
-            auto fieldUI = createFieldUI(field, fieldPtr);
+            auto fieldUI = InspectorUI::createFieldUI(selectedEntity, typeIndex, field, uiRoot->getTheme());
 
             if (fieldUI) {
                 auto row = std::make_shared<Axiom::UIHorizontalBox>();
@@ -411,7 +371,7 @@ void EditorLayer::refreshInspectorPanel() {
     inspectorPanel->addChild(addComponentGroup);
 }
 
-void EditorLayer::spawnHierarchyContextMenu() {
+void EditorLayer::spawnHierarchyContextMenu(Math::Vec2 spawnPos) {
     contextMenu = std::make_shared<Axiom::UIPanel>();
     contextMenu->setBackgroundColor(Axiom::Color::transparent());
 
@@ -424,281 +384,46 @@ void EditorLayer::spawnHierarchyContextMenu() {
 
         shouldRefreshHierarchy = true;
         shouldRefreshInspector = true;
-        shouldDeleteContextMenu = true;
+        uiRoot->closePopup();
     });
 
     contextMenu->addChild(createBtn);
-    contextMenu->arrange(mainUiContext, lastMousePos, contextMenu->getDesiredSize(mainUiContext));
+    uiRoot->openPopup(contextMenu, spawnPos);
 }
 
 void EditorLayer::refreshProfilerPanel() {
-    profilerPanel->clearChildren();
-
-    auto headerRow = std::make_shared<Axiom::UIHorizontalBox>();
-    headerRow->setVerticalAlignment(Axiom::UIAlignment::Start);
-    headerRow->setMargin({0.0f, 0.0f, 0.0f, 10.0f});
-
-    auto headerText = std::make_shared<Axiom::UIText>("Profiler");
-    headerText->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-    headerRow->addChild(headerText);
-    profilerPanel->addChild(headerRow);
-
     const auto& profiles = Axiom::Profiler::getProfiles();
-    for (const auto& profile : profiles) {
-        auto ms = std::chrono::duration_cast<std::chrono::duration<double>>(profile.duration);
-        auto labelText = std::format("{}: {:.4f} ms", profile.name, ms.count());
-        auto label = std::make_shared<Axiom::UIText>(labelText);
-        label->setVerticalAlignment(Axiom::UIAlignment::Start);
-        profilerPanel->addChild(label);
-    }
-}
 
-std::shared_ptr<Axiom::UIElement> EditorLayer::createFieldUI(const Axiom::FieldInfo& field, void* fieldPtr) {
-    auto horizontalBox = std::make_shared<Axiom::UIHorizontalBox>();
-    horizontalBox->setMargin({0.0f, 0.0f, 0.0f, 4.0f});
+    if (profilerPanel->getChildren().size() != profiles.size() + 1) {
+        profilerPanel->clearChildren();
 
-    std::string displayName;
-    for (size_t i = 0; i < field.name.length(); ++i) {
-        if (i == 0) {
-            displayName += std::toupper(field.name[i]);
-        } else if (std::isupper(field.name[i])) {
-            displayName += " ";
-            displayName += field.name[i];
-        } else {
-            displayName += field.name[i];
+        auto headerRow = std::make_shared<Axiom::UIHorizontalBox>();
+        headerRow->setVerticalAlignment(Axiom::UIAlignment::Start);
+        headerRow->setMargin({0.0f, 0.0f, 0.0f, 10.0f});
+
+        auto headerText = std::make_shared<Axiom::UIText>("Profiler");
+        headerText->setHorizontalAlignment(Axiom::UIAlignment::Fill);
+        headerRow->addChild(headerText);
+        profilerPanel->addChild(headerRow);
+
+        for (size_t i = 0; i < profiles.size(); i++) {
+            auto label = std::make_shared<Axiom::UIText>("");
+            label->setVerticalAlignment(Axiom::UIAlignment::Start);
+            profilerPanel->addChild(label);
         }
     }
 
-    auto label = std::make_shared<Axiom::UIText>(displayName);
-    label->setFixedSize({120.0f, -1.0f});
-    label->setVerticalAlignment(Axiom::UIAlignment::Start);
-    label->setColor(uiRoot->getTheme()->textMutedColor);
-    horizontalBox->addChild(label);
-
-    switch (field.type) {
-    case Axiom::FieldType::Float:
-        buildFloatUI(horizontalBox, field, fieldPtr);
-        break;
-    case Axiom::FieldType::Int:
-        buildIntUI(horizontalBox, field, fieldPtr);
-        break;
-    case Axiom::FieldType::Bool:
-        buildBoolUI(horizontalBox, field, fieldPtr);
-        break;
-    case Axiom::FieldType::String:
-        buildStringUI(horizontalBox, field, fieldPtr);
-        break;
-    case Axiom::FieldType::Vec2:
-        buildVec2UI(horizontalBox, field, fieldPtr);
-        break;
-    case Axiom::FieldType::Vec3:
-        buildVec3UI(horizontalBox, field, fieldPtr);
-        break;
-    case Axiom::FieldType::Vec4:
-        buildVec4UI(horizontalBox, field, fieldPtr);
-        break;
-    case Axiom::FieldType::Color:
-        buildColorUI(horizontalBox, field, fieldPtr);
-        break;
-    case Axiom::FieldType::AssetHandle:
-        buildAssetHandleUI(horizontalBox, field, fieldPtr);
-        break;
-    case Axiom::FieldType::Enum:
-        buildEnumUI(horizontalBox, field, fieldPtr);
-        break;
-    default:
-        break;
+    auto children = profilerPanel->getChildren();
+    for (size_t i = 0; i < profiles.size(); ++i) {
+        auto ms = std::chrono::duration_cast<std::chrono::duration<double>>(profiles[i].duration);
+        auto labelText = std::format("{}: {:.4f} ms", profiles[i].name, ms.count());
+        auto textWidget = std::static_pointer_cast<Axiom::UIText>(children[i + 1]);
+        textWidget->setText(labelText);
     }
-
-    return horizontalBox;
 }
 
-void EditorLayer::buildFloatUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr) {
-    float* valuePtr = static_cast<float*>(fieldPtr);
-    auto drag = std::make_shared<Axiom::UIScalarField<float>>();
-    drag->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-    drag->setValueGetter([valuePtr]() { return *valuePtr; });
-    drag->setValueSetter([valuePtr](float v) { *valuePtr = v; });
-    horizontalBox->addChild(drag);
-}
-
-void EditorLayer::buildIntUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr) {
-    int* valuePtr = static_cast<int*>(fieldPtr);
-    auto drag = std::make_shared<Axiom::UIScalarField<int>>();
-    drag->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-    drag->setValueGetter([valuePtr]() { return *valuePtr; });
-    drag->setValueSetter([valuePtr](int v) { *valuePtr = v; });
-    horizontalBox->addChild(drag);
-}
-
-void EditorLayer::buildBoolUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr) {
-    bool* valuePtr = static_cast<bool*>(fieldPtr);
-    auto checkbox = std::make_shared<Axiom::UICheckbox>();
-    checkbox->setHorizontalAlignment(Axiom::UIAlignment::Start);
-    checkbox->setValueGetter([valuePtr]() { return *valuePtr; });
-    checkbox->setValueSetter([valuePtr](bool v) { *valuePtr = v; });
-    horizontalBox->addChild(checkbox);
-}
-
-void EditorLayer::buildStringUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr) {
-    std::string* valuePtr = static_cast<std::string*>(fieldPtr);
-    auto textInput = std::make_shared<Axiom::UITextInput>();
-    textInput->setValueGetter([valuePtr]() { return *valuePtr; });
-    textInput->setValueSetter([this, valuePtr](const std::string& v) {
-        *valuePtr = v;
-        shouldRefreshHierarchy = true;
-    });
-    horizontalBox->addChild(textInput);
-}
-
-void EditorLayer::buildVec2UI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr) {
-    Math::Vec2* valuePtr = static_cast<Math::Vec2*>(fieldPtr);
-    auto createAxis = [&](Axiom::Color color, auto getter, auto setter) {
-        auto drag = std::make_shared<Axiom::UIScalarField<float>>();
-        drag->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-        drag->setValueGetter(getter);
-        drag->setValueSetter(setter);
-        drag->setNormalColor(color);
-        horizontalBox->addChild(drag);
-    };
-
-    createAxis(Axiom::Color(0.9f, 0.1f, 0.1f), [valuePtr]() { return valuePtr->x(); }, [valuePtr](float v) { valuePtr->x() = v; });
-    createAxis(Axiom::Color(0.1f, 0.9f, 0.1f), [valuePtr]() { return valuePtr->y(); }, [valuePtr](float v) { valuePtr->y() = v; });
-}
-
-void EditorLayer::buildVec3UI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr) {
-    Math::Vec3* valuePtr = static_cast<Math::Vec3*>(fieldPtr);
-
-    auto createAxis = [&](Axiom::Color color, auto getter, auto setter) {
-        auto drag = std::make_shared<Axiom::UIScalarField<float>>();
-        drag->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-        drag->setValueGetter(getter);
-        drag->setValueSetter(setter);
-        drag->setNormalColor(color);
-        horizontalBox->addChild(drag);
-    };
-
-    createAxis(Axiom::Color(0.9f, 0.1f, 0.1f), [valuePtr]() { return valuePtr->x(); }, [valuePtr](float v) { valuePtr->x() = v; });
-    createAxis(Axiom::Color(0.1f, 0.9f, 0.1f), [valuePtr]() { return valuePtr->y(); }, [valuePtr](float v) { valuePtr->y() = v; });
-    createAxis(Axiom::Color(0.1f, 0.1f, 0.9f), [valuePtr]() { return valuePtr->z(); }, [valuePtr](float v) { valuePtr->z() = v; });
-}
-
-void EditorLayer::buildVec4UI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr) {
-    Math::Vec4* valuePtr = static_cast<Math::Vec4*>(fieldPtr);
-
-    auto createAxis = [&](Axiom::Color color, auto getter, auto setter) {
-        auto drag = std::make_shared<Axiom::UIScalarField<float>>();
-        drag->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-        drag->setValueGetter(getter);
-        drag->setValueSetter(setter);
-        drag->setNormalColor(color);
-        horizontalBox->addChild(drag);
-    };
-
-    createAxis(Axiom::Color(0.9f, 0.1f, 0.1f), [valuePtr]() { return valuePtr->x(); }, [valuePtr](float v) { valuePtr->x() = v; });
-    createAxis(Axiom::Color(0.1f, 0.9f, 0.1f), [valuePtr]() { return valuePtr->y(); }, [valuePtr](float v) { valuePtr->y() = v; });
-    createAxis(Axiom::Color(0.1f, 0.1f, 0.9f), [valuePtr]() { return valuePtr->z(); }, [valuePtr](float v) { valuePtr->z() = v; });
-    createAxis(Axiom::Color(0.9f, 0.9f, 0.1f), [valuePtr]() { return valuePtr->w(); }, [valuePtr](float v) { valuePtr->w() = v; });
-}
-
-void EditorLayer::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr) {
-    Axiom::Color* valuePtr = static_cast<Axiom::Color*>(fieldPtr);
-    // TODO: add a color picker UI element and use it here
-    auto colorPreview = std::make_shared<Axiom::UIButton>("");
-    colorPreview->setHorizontalAlignment(Axiom::UIAlignment::Start);
-    colorPreview->setFixedSize({20.0f, 20.0f});
-    colorPreview->setNormalColor(*valuePtr);
-    colorPreview->setHoverColor(*valuePtr);
-    colorPreview->setActiveColor(*valuePtr);
-    horizontalBox->addChild(colorPreview);
-
-    auto createChannelSlider = [&](const std::string& channelName, auto getter, auto setter) {
-        auto slider = std::make_shared<Axiom::UIScalarField<float>>();
-        slider->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-        slider->setValueGetter(getter);
-        slider->setValueSetter(setter);
-        slider->setNormalColor(Axiom::Color(0.5f, 0.5f, 0.5f));
-        slider->setLimits(0.0f, 1.0f);
-        horizontalBox->addChild(slider);
-    };
-
-    createChannelSlider(
-        "R", [valuePtr]() { return valuePtr->r(); },
-        [valuePtr, colorPreview](float v) {
-            valuePtr->r() = v;
-            colorPreview->setNormalColor(*valuePtr);
-            colorPreview->setHoverColor(*valuePtr);
-            colorPreview->setActiveColor(*valuePtr);
-        });
-    createChannelSlider(
-        "G", [valuePtr]() { return valuePtr->g(); },
-        [valuePtr, colorPreview](float v) {
-            valuePtr->g() = v;
-            colorPreview->setNormalColor(*valuePtr);
-            colorPreview->setHoverColor(*valuePtr);
-            colorPreview->setActiveColor(*valuePtr);
-        });
-    createChannelSlider(
-        "B", [valuePtr]() { return valuePtr->b(); },
-        [valuePtr, colorPreview](float v) {
-            valuePtr->b() = v;
-            colorPreview->setNormalColor(*valuePtr);
-            colorPreview->setHoverColor(*valuePtr);
-            colorPreview->setActiveColor(*valuePtr);
-        });
-    createChannelSlider(
-        "A", [valuePtr]() { return valuePtr->a(); },
-        [valuePtr, colorPreview](float v) {
-            valuePtr->a() = v;
-            colorPreview->setNormalColor(*valuePtr);
-            colorPreview->setHoverColor(*valuePtr);
-            colorPreview->setActiveColor(*valuePtr);
-        });
-}
-
-void EditorLayer::buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr) {
-    Axiom::UUID* valuePtr = static_cast<Axiom::UUID*>(fieldPtr);
-
-    auto slotBox = std::make_shared<Axiom::UIHorizontalBox>();
-    slotBox->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-    slotBox->setPadding({4.0f, 4.0f, 4.0f, 4.0f});
-
-    auto getAssetName = [valuePtr]() -> std::string {
-        if (valuePtr->isValid()) {
-            return Axiom::AssetManager::getMetadata(*valuePtr).name;
-        }
-        return "None";
-    };
-
-    auto assetButton = std::make_shared<Axiom::UIButton>(getAssetName());
-    assetButton->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-    assetButton->setMargin({0.0f, 0.0f, 4.0f, 0.0f});
-    assetButton->setOnClick([this, valuePtr, assetButton, field]() { buildAssetPickerPopUp(valuePtr, assetButton, field); });
-
-    auto clearButton = std::make_shared<Axiom::UIButton>("X");
-    clearButton->setFixedSize({24.0f, 24.0f});
-    clearButton->setNormalColor(uiRoot->getTheme()->errorColor);
-    clearButton->setOnClick([valuePtr, assetButton, getAssetName]() {
-        *valuePtr = Axiom::UUID();
-        assetButton->setText(getAssetName());
-    });
-
-    slotBox->addChild(assetButton);
-    slotBox->addChild(clearButton);
-    horizontalBox->addChild(slotBox);
-}
-
-void EditorLayer::buildEnumUI(std::shared_ptr<Axiom::UIHorizontalBox> horizontalBox, const Axiom::FieldInfo& field, void* fieldPtr) {
-    int* valuePtr = static_cast<int*>(fieldPtr);
-    auto dropdown = std::make_shared<Axiom::UIDropdown>(field.enumOptions);
-    dropdown->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-    dropdown->setSelectedIndex(*valuePtr);
-    dropdown->setOnSelectionChanged([this, valuePtr](int index, const std::string& optionText) { *valuePtr = index; });
-
-    horizontalBox->addChild(dropdown);
-}
-
-void EditorLayer::buildAssetPickerPopUp(Axiom::UUID* valuePtr, std::shared_ptr<Axiom::UIButton> assetButton, const Axiom::FieldInfo& field) {
+void EditorLayer::buildAssetPickerPopUp(Axiom::Entity entity, std::type_index compTypeIndex, std::shared_ptr<Axiom::UIButton> assetButton,
+                                        const Axiom::FieldInfo& field) {
     assetPickerMenu = std::make_shared<Axiom::UIPanel>();
     assetPickerMenu->setBackgroundColor(uiRoot->getTheme()->panelBackgroundColor);
     assetPickerMenu->setPadding({4.0f, 4.0f, 4.0f, 4.0f});
@@ -720,12 +445,12 @@ void EditorLayer::buildAssetPickerPopUp(Axiom::UUID* valuePtr, std::shared_ptr<A
             btn->setHorizontalAlignment(Axiom::UIAlignment::Fill);
             btn->setMargin({0.0f, 0.0f, 0.0f, 2.0f});
 
-            btn->setOnClick([this, valuePtr, assetButton, assetID, assetName]() {
-                *valuePtr = assetID;
-                assetButton->setText(assetName);
-
-                shouldDeleteAssetPicker = true;
-                shouldRefreshInspector = true;
+            btn->setOnClick([this, entity, compTypeIndex, offset = field.offset, assetButton, assetID, assetName]() mutable {
+                void* compData = entity.getComponentData(compTypeIndex);
+                if (compData) {
+                    *reinterpret_cast<Axiom::UUID*>(static_cast<char*>(compData) + offset) = assetID;
+                    assetButton->setText(assetName);
+                }
             });
 
             vBox->addChild(btn);

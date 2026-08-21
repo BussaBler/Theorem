@@ -42,26 +42,50 @@ void ProjectHubLayer::onRender(Axiom::RenderGraph& renderGraph) {
 }
 
 void ProjectHubLayer::buildUI() {
-    uiRoot = std::make_shared<Axiom::UIContainer>();
+    uiRoot = std::make_shared<Axiom::UICanvas>();
+
+    auto background = std::make_shared<Axiom::UIPanel>();
+    background->setBackgroundColor(uiRoot->getTheme()->windowBackgroundColor);
+    uiRoot->addChild(background);
+
+    auto hubWindow = std::make_shared<Axiom::UIVerticalBox>();
+    hubWindow->setHorizontalAlignment(Axiom::UIAlignment::Center);
+    hubWindow->setVerticalAlignment(Axiom::UIAlignment::Center);
+    hubWindow->setFixedSize({500.0f, -1.0f});
+    background->addChild(hubWindow);
+
+    auto titleText = std::make_shared<Axiom::UIText>("Theorem Engine");
+    titleText->setHorizontalAlignment(Axiom::UIAlignment::Center);
+    titleText->setMargin({0.0f, 0.0f, 0.0f, 24.0f});
+    hubWindow->addChild(titleText);
+
     projectListPanel = std::make_shared<Axiom::UIVerticalBox>();
+    projectListPanel->setPadding({16.0f, 16.0f, 16.0f, 16.0f});
+    projectListPanel->setMargin({0.0f, 0.0f, 0.0f, 16.0f});
+    hubWindow->addChild(projectListPanel);
+
+    auto recentLabel = std::make_shared<Axiom::UIText>("Recent Projects");
+    recentLabel->setColor(uiRoot->getTheme()->textMutedColor);
+    recentLabel->setMargin({0.0f, 0.0f, 0.0f, 12.0f});
+    projectListPanel->addChild(recentLabel);
 
     for (const auto& project : recentProjects) {
-        std::shared_ptr<Axiom::UIButton> projectBtn = std::make_shared<Axiom::UIButton>(project.name);
+        auto projectBtn = std::make_shared<Axiom::UIButton>(project.name);
+        projectBtn->setMargin({0.0f, 0.0f, 0.0f, 4.0f});
         projectBtn->setOnClick([this, project]() { Axiom::AX_LOG_INFO("OPEN PROJECT"); });
         projectListPanel->addChild(projectBtn);
     }
 
-    std::shared_ptr<Axiom::UIButton> browseBtn = std::make_shared<Axiom::UIButton>("Browse files...");
+    auto browseBtn = std::make_shared<Axiom::UIButton>("Browse files...");
+    browseBtn->setPadding({12.0f, 8.0f, 12.0f, 8.0f});
+    browseBtn->setNormalColor(uiRoot->getTheme()->accentColor);
     browseBtn->setOnClick([this]() {
         std::optional<std::filesystem::path> selectedFolder = Axiom::FileDialogs::openFolder("Select a Project Folder");
         if (selectedFolder.has_value()) {
-            Axiom::AX_LOG_INFO("Selected Project folder: {}", selectedFolder->string());
             openProject(selectedFolder.value());
         }
     });
-    projectListPanel->addChild(browseBtn);
-
-    uiRoot->addChild(projectListPanel);
+    hubWindow->addChild(browseBtn);
 }
 
 void ProjectHubLayer::loadRecentProjects() {

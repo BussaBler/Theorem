@@ -125,7 +125,7 @@ void EditorLayer::onAttach() {
     }
 
     editorCamera = std::make_unique<EditorCamera>(Math::Vec3(0.0f, 5.0f, 10.0f), -25.0f);
-    editorCamera->setPerspective(45.0f, static_cast<float>(viewportSize.x()) / static_cast<float>(viewportSize.y()), 0.1f, 3000.0f);
+    editorCamera->setPerspective(45.0f, static_cast<float>(1920) / static_cast<float>(1080), 0.1f, 3000.0f);
 
     refreshHierarchyPanel();
 }
@@ -420,43 +420,4 @@ void EditorLayer::refreshProfilerPanel() {
         auto textWidget = std::static_pointer_cast<Axiom::UIText>(children[i + 1]);
         textWidget->setText(labelText);
     }
-}
-
-void EditorLayer::buildAssetPickerPopUp(Axiom::Entity entity, std::type_index compTypeIndex, std::shared_ptr<Axiom::UIButton> assetButton,
-                                        const Axiom::FieldInfo& field) {
-    assetPickerMenu = std::make_shared<Axiom::UIPanel>();
-    assetPickerMenu->setBackgroundColor(uiRoot->getTheme()->panelBackgroundColor);
-    assetPickerMenu->setPadding({4.0f, 4.0f, 4.0f, 4.0f});
-
-    auto vBox = std::make_shared<Axiom::UIVerticalBox>();
-    assetPickerMenu->addChild(vBox);
-
-    std::vector<Axiom::UUID> availableAssets = Axiom::AssetManager::getAssetsByType(field.assetType);
-
-    if (availableAssets.empty()) {
-        auto emptyLabel = std::make_shared<Axiom::UIText>("No assets found.");
-        emptyLabel->setColor(uiRoot->getTheme()->textMutedColor);
-        vBox->addChild(emptyLabel);
-    } else {
-        for (Axiom::UUID assetID : availableAssets) {
-            std::string assetName = Axiom::AssetManager::getMetadata(assetID).name;
-
-            auto btn = std::make_shared<Axiom::UIButton>(assetName);
-            btn->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-            btn->setMargin({0.0f, 0.0f, 0.0f, 2.0f});
-
-            btn->setOnClick([this, entity, compTypeIndex, offset = field.offset, assetButton, assetID, assetName]() mutable {
-                void* compData = entity.getComponentData(compTypeIndex);
-                if (compData) {
-                    *reinterpret_cast<Axiom::UUID*>(static_cast<char*>(compData) + offset) = assetID;
-                    assetButton->setText(assetName);
-                }
-            });
-
-            vBox->addChild(btn);
-        }
-    }
-
-    Math::Vec2 spawnPos = assetButton->getArrangedPosition() + Math::Vec2(0.0f, assetButton->getArrangedSize().y() + 4.0f);
-    assetPickerMenu->arrange(mainUiContext, spawnPos, assetPickerMenu->getDesiredSize(mainUiContext));
 }

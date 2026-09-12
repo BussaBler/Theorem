@@ -1,7 +1,6 @@
 #pragma once
 #include "EditorCamera.h"
-#include "UI/Elements/UIButton.h"
-#include "UI/Elements/UICanvas.h"
+
 #include <Axiom.h>
 #include <cstdint>
 #include <memory>
@@ -38,6 +37,7 @@ class EditorLayer : public Axiom::Layer {
     Axiom::UIContext mainUiContext;
     std::shared_ptr<Axiom::UICanvas> uiRoot;
     std::shared_ptr<Axiom::UIImage> viewportImage;
+    std::shared_ptr<Axiom::UIPanel> leftPanel;
     std::shared_ptr<Axiom::UIVerticalBox> hierarchyPanel;
     std::unordered_map<uint32_t, std::shared_ptr<Axiom::UIButton>> hierarchyButtons;
     std::shared_ptr<Axiom::UIVerticalBox> inspectorPanel;

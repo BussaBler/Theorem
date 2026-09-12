@@ -14,6 +14,11 @@ class ProjectHubLayer : public Axiom::Layer {
         std::string lastModified;
     };
 
+    struct RecentProject {
+        std::string name;
+        std::filesystem::path path;
+    };
+
   public:
     ProjectHubLayer();
     ~ProjectHubLayer() = default;
@@ -28,12 +33,13 @@ class ProjectHubLayer : public Axiom::Layer {
   private:
     void buildUI();
     void loadRecentProjects();
+    void addToRecentProjects(const std::string& name, const std::filesystem::path& filePath);
     void openProject(const std::filesystem::path& projectPath);
 
   private:
     Axiom::UIContext hubUiContext;
-    std::shared_ptr<Axiom::UIContainer> uiRoot;
+    std::shared_ptr<Axiom::UICanvas> uiRoot;
     std::shared_ptr<Axiom::UIVerticalBox> projectListPanel;
 
-    std::vector<ProjectData> recentProjects;
+    std::vector<RecentProject> recentProjects;
 };

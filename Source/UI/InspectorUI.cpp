@@ -1,19 +1,13 @@
 #include "InspectorUI.h"
 
-#include "Math/Color.h"
-#include "UI/Elements/UICheckbox.h"
-#include "UI/Elements/UIElement.h"
-#include "UI/Elements/UIScalarField.h"
-#include "UI/Elements/UITextInput.h"
-
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 std::shared_ptr<Axiom::UIElement> InspectorUI::createFieldUI(Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field,
-                                                             const std::shared_ptr<Axiom::UITheme>& theme) {
+                                                             const Axiom::UITheme* theme) {
     auto horizontalBox = std::make_shared<Axiom::UIHorizontalBox>();
-    horizontalBox->setMargin({0.0f, 0.0f, 0.0f, 4.0f});
 
     std::string displayName = "";
     for (size_t i = 0; i < field.name.size(); i++) {
@@ -28,10 +22,7 @@ std::shared_ptr<Axiom::UIElement> InspectorUI::createFieldUI(Axiom::Entity entit
     }
 
     auto label = std::make_shared<Axiom::UIText>(displayName);
-    label->setFixedSize({120.0f, -1.0f});
-    label->setVerticalAlignment(Axiom::UIAlignment::Start);
-    label->setColor(theme->textMutedColor);
-    horizontalBox->addChild(label);
+    horizontalBox->addSlot(label).setFixedSize({120.0f, -1.0f}).setVerticalAlignment(Axiom::UIAlignment::Start);
 
     switch (field.type) {
     case Axiom::FieldType::Float:
@@ -74,7 +65,6 @@ std::shared_ptr<Axiom::UIElement> InspectorUI::createFieldUI(Axiom::Entity entit
 void InspectorUI::buildFloatUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex,
                                const Axiom::FieldInfo& field) {
     auto drag = std::make_shared<Axiom::UIScalarField<float>>();
-    drag->setHorizontalAlignment(Axiom::UIAlignment::Fill);
     drag->setValueGetter([entity, compTypeIndex, offset = field.offset]() -> float {
         void* compData = entity.getComponentData(compTypeIndex);
         if (!compData) {
@@ -88,12 +78,11 @@ void InspectorUI::buildFloatUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axio
             *reinterpret_cast<float*>(static_cast<char*>(compData) + offset) = newValue;
         }
     });
-    box->addChild(drag);
+    box->addSlot(drag).setHorizontalAlignment(Axiom::UIAlignment::Fill);
 }
 
 void InspectorUI::buildIntUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field) {
     auto drag = std::make_shared<Axiom::UIScalarField<int>>();
-    drag->setHorizontalAlignment(Axiom::UIAlignment::Fill);
     drag->setValueGetter([entity, compTypeIndex, offset = field.offset] -> int {
         void* compData = entity.getComponentData(compTypeIndex);
         if (!compData) {
@@ -107,12 +96,11 @@ void InspectorUI::buildIntUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom:
             *reinterpret_cast<int*>(static_cast<char*>(compData) + offset) = newValue;
         }
     });
-    box->addChild(drag);
+    box->addSlot(drag).setHorizontalAlignment(Axiom::UIAlignment::Fill);
 }
 
 void InspectorUI::buildBoolUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field) {
     auto checkBox = std::make_shared<Axiom::UICheckbox>();
-    checkBox->setHorizontalAlignment(Axiom::UIAlignment::Start);
     checkBox->setValueGetter([entity, compTypeIndex, offset = field.offset]() -> bool {
         void* compData = entity.getComponentData(compTypeIndex);
         if (!compData) {
@@ -126,7 +114,7 @@ void InspectorUI::buildBoolUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom
             *reinterpret_cast<bool*>(static_cast<char*>(compData) + offset) = newValue;
         }
     });
-    box->addChild(checkBox);
+    box->addSlot(checkBox).setHorizontalAlignment(Axiom::UIAlignment::Start);
 }
 
 void InspectorUI::buildStringUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex,
@@ -145,17 +133,16 @@ void InspectorUI::buildStringUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axi
             *reinterpret_cast<std::string*>(static_cast<char*>(compData) + offset) = newValue;
         }
     });
-    box->addChild(textInput);
+    box->addSlot(textInput);
 }
 
 void InspectorUI::buildVec2UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field) {
     auto createAxis = [&](Axiom::Color color, auto getter, auto setter) {
         auto drag = std::make_shared<Axiom::UIScalarField<float>>();
-        drag->setHorizontalAlignment(Axiom::UIAlignment::Fill);
         drag->setValueGetter(getter);
         drag->setValueSetter(setter);
         drag->setNormalColor(color);
-        box->addChild(drag);
+        box->addSlot(drag).setHorizontalAlignment(Axiom::UIAlignment::Fill);
     };
 
     createAxis(
@@ -190,11 +177,10 @@ void InspectorUI::buildVec2UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom
 void InspectorUI::buildVec3UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field) {
     auto createAxis = [&](Axiom::Color color, auto getter, auto setter) {
         auto drag = std::make_shared<Axiom::UIScalarField<float>>();
-        drag->setHorizontalAlignment(Axiom::UIAlignment::Fill);
         drag->setValueGetter(getter);
         drag->setValueSetter(setter);
         drag->setNormalColor(color);
-        box->addChild(drag);
+        box->addSlot(drag).setHorizontalAlignment(Axiom::UIAlignment::Fill);
     };
 
     createAxis(
@@ -243,11 +229,10 @@ void InspectorUI::buildVec3UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom
 void InspectorUI::buildVec4UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field) {
     auto createAxis = [&](Axiom::Color color, auto getter, auto setter) {
         auto drag = std::make_shared<Axiom::UIScalarField<float>>();
-        drag->setHorizontalAlignment(Axiom::UIAlignment::Fill);
         drag->setValueGetter(getter);
         drag->setValueSetter(setter);
         drag->setNormalColor(color);
-        box->addChild(drag);
+        box->addSlot(drag).setHorizontalAlignment(Axiom::UIAlignment::Fill);
     };
 
     createAxis(
@@ -308,10 +293,8 @@ void InspectorUI::buildVec4UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom
 }
 
 void InspectorUI::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field,
-                               const std::shared_ptr<Axiom::UITheme>& theme) {
-    auto colorPreview = std::make_shared<Axiom::UIButton>("");
-    colorPreview->setHorizontalAlignment(Axiom::UIAlignment::Start);
-    colorPreview->setFixedSize({20.0f, 20.0f});
+                               const Axiom::UITheme* theme) {
+    auto colorPreview = std::make_shared<Axiom::UIButton>();
 
     void* initialData = entity.getComponentData(compTypeIndex);
     if (initialData) {
@@ -321,7 +304,7 @@ void InspectorUI::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axio
         colorPreview->setActiveColor(initialColor);
     }
 
-    box->addChild(colorPreview);
+    box->addSlot(colorPreview).setFixedSize({theme->defaultRowHeight, theme->defaultRowHeight}).setHorizontalAlignment(Axiom::UIAlignment::Start);
 
     auto updatePreview = [colorPreview, entity, compTypeIndex, offset = field.offset]() {
         void* compData = entity.getComponentData(compTypeIndex);
@@ -335,12 +318,11 @@ void InspectorUI::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axio
 
     auto createChannelSlider = [&](auto getter, auto setter) {
         auto slider = std::make_shared<Axiom::UIScalarField<float>>();
-        slider->setHorizontalAlignment(Axiom::UIAlignment::Fill);
         slider->setValueGetter(getter);
         slider->setValueSetter(setter);
         slider->setNormalColor(Axiom::Color(0.5f, 0.5f, 0.5f));
         slider->setLimits(0.0f, 1.0f);
-        box->addChild(slider);
+        box->addSlot(slider).setHorizontalAlignment(Axiom::UIAlignment::Fill);
     };
 
     createChannelSlider(
@@ -405,10 +387,8 @@ void InspectorUI::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axio
 }
 
 void InspectorUI::buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex,
-                                     const Axiom::FieldInfo& field, const std::shared_ptr<Axiom::UITheme>& theme) {
+                                     const Axiom::FieldInfo& field, const Axiom::UITheme* theme) {
     auto slotBox = std::make_shared<Axiom::UIHorizontalBox>();
-    slotBox->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-    slotBox->setPadding({4.0f, 4.0f, 4.0f, 4.0f});
 
     auto getAssetName = [entity, compTypeIndex, offset = field.offset]() -> std::string {
         void* compData = entity.getComponentData(compTypeIndex);
@@ -420,13 +400,67 @@ void InspectorUI::buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> box
         return "None";
     };
 
-    auto assetButton = std::make_shared<Axiom::UIButton>(getAssetName());
-    assetButton->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-    assetButton->setMargin({0.0f, 0.0f, 4.0f, 0.0f});
+    auto assetButton = std::make_shared<Axiom::UIButton>();
+    assetButton->setText(getAssetName());
+    assetButton->setOnClick([assetButton, field, entity, compTypeIndex, offset = field.offset, getAssetName, theme]() {
+        Axiom::UICanvas* canvas = assetButton->getParentCanvas();
+        if (!canvas)
+            return;
 
-    auto clearButton = std::make_shared<Axiom::UIButton>("X");
-    clearButton->setFixedSize({24.0f, 24.0f});
-    clearButton->setNormalColor(theme->errorColor);
+        Math::Vec2 modalSize(340.0f, 250.0f);
+
+        auto modalPanel = std::make_shared<Axiom::UIPanel>();
+        modalPanel->setBackgroundColor(theme->panelBackgroundColor);
+
+        auto mainLayout = std::make_shared<Axiom::UIVerticalBox>();
+
+        auto headerBox = std::make_shared<Axiom::UIHorizontalBox>();
+
+        auto titleText = std::make_shared<Axiom::UIText>("Select Asset: " + field.name);
+
+        auto closeBtn = std::make_shared<Axiom::UIButton>();
+        closeBtn->setText("X");
+        closeBtn->setNormalColor(Axiom::Color(0.6f, 0.2f, 0.2f, 1.0f));
+        closeBtn->setOnClick([canvas]() { canvas->closePopup(); });
+
+        headerBox->addSlot(titleText).setAlignment(Axiom::UIAlignment::Start, Axiom::UIAlignment::Center);
+        headerBox->addSlot(closeBtn)
+            .setFixedSize({theme->defaultRowHeight, theme->defaultRowHeight})
+            .setAlignment(Axiom::UIAlignment::End, Axiom::UIAlignment::Center);
+
+        auto scrollBox = std::make_shared<Axiom::UIScrollBox>();
+
+        std::vector<Axiom::UUID> assetsIds = Axiom::AssetManager::getAssetsByType(field.assetType);
+        for (const auto& id : assetsIds) {
+            std::string assetName = Axiom::AssetManager::getMetadata(id).name;
+            auto itemBtn = std::make_shared<Axiom::UIButton>();
+            itemBtn->setText(assetName);
+            itemBtn->setOnClick([entity, compTypeIndex, offset, id, assetButton, getAssetName, canvas]() {
+                void* componentData = entity.getComponentData(compTypeIndex);
+                if (componentData) {
+                    *reinterpret_cast<Axiom::UUID*>(static_cast<char*>(componentData) + offset) = id;
+                    assetButton->setText(getAssetName());
+                }
+                canvas->closePopup();
+            });
+
+            scrollBox->addSlot(itemBtn).setHorizontalAlignment(Axiom::UIAlignment::Fill).setMargin({2.0f, 2.0f, 2.0f, 2.0f});
+        }
+
+        mainLayout->addSlot(headerBox).setMargin(theme->containerPadding).setHorizontalAlignment(Axiom::UIAlignment::Fill);
+        mainLayout->addSlot(scrollBox).setAlignment(Axiom::UIAlignment::Fill, Axiom::UIAlignment::Fill);
+
+        modalPanel->addSlot(mainLayout).setAlignment(Axiom::UIAlignment::Fill, Axiom::UIAlignment::Fill);
+
+        Math::Vec2 screenSize = Math::Vec2(Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight());
+        Math::Vec2 modalPos = (screenSize - modalSize) * 0.5f;
+
+        canvas->openPopup(modalPanel, modalPos);
+    });
+
+    auto clearButton = std::make_shared<Axiom::UIButton>();
+    clearButton->setText("X");
+    clearButton->setNormalColor(Axiom::Color::red());
     clearButton->setOnClick([entity, compTypeIndex, offset = field.offset, assetButton, getAssetName]() {
         void* compData = entity.getComponentData(compTypeIndex);
         if (compData) {
@@ -435,26 +469,29 @@ void InspectorUI::buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> box
         }
     });
 
-    slotBox->addChild(assetButton);
-    slotBox->addChild(clearButton);
-    box->addChild(slotBox);
+    slotBox->addSlot(assetButton).setHorizontalAlignment(Axiom::UIAlignment::Fill).setMargin({0.0f, 0.0f, 4.0f, 0.0f});
+    slotBox->addSlot(clearButton).setFixedSize({theme->defaultRowHeight, theme->defaultRowHeight});
+    box->addSlot(slotBox).setHorizontalAlignment(Axiom::UIAlignment::Fill);
 }
 
 void InspectorUI::buildEnumUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field) {
-    auto dropdown = std::make_shared<Axiom::UIDropdown>(field.enumOptions);
-    dropdown->setHorizontalAlignment(Axiom::UIAlignment::Fill);
+    auto dropdown = std::make_shared<Axiom::UIDropdown>();
+    dropdown->setOptions(field.enumOptions);
 
-    void* initialData = entity.getComponentData(compTypeIndex);
-    if (initialData) {
-        dropdown->setSelectedIndex(*reinterpret_cast<int*>(static_cast<char*>(initialData) + field.offset));
-    }
+    dropdown->setOptions(field.enumOptions)
+        .setValueGetter([entity, compTypeIndex, offset = field.offset]() -> int {
+            void* compData = entity.getComponentData(compTypeIndex);
+            if (compData) {
+                return *reinterpret_cast<int*>(static_cast<char*>(compData) + offset);
+            }
+            return 0;
+        })
+        .setValueSetter([entity, compTypeIndex, offset = field.offset](int index) mutable {
+            void* compData = entity.getComponentData(compTypeIndex);
+            if (compData) {
+                *reinterpret_cast<int*>(static_cast<char*>(compData) + offset) = index;
+            }
+        });
 
-    dropdown->setOnSelectionChanged([entity, compTypeIndex, offset = field.offset](int index, const std::string&) mutable {
-        void* compData = entity.getComponentData(compTypeIndex);
-        if (compData) {
-            *reinterpret_cast<int*>(static_cast<char*>(compData) + offset) = index;
-        }
-    });
-
-    box->addChild(dropdown);
+    box->addSlot(dropdown).setHorizontalAlignment(Axiom::UIAlignment::Fill);
 }

@@ -1,7 +1,9 @@
 #include "EditorLayer.h"
 
+#include "Math/Color.h"
 #include "Project.h"
 #include "UI/InspectorUI.h"
+#include "UI/UIPanel.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -12,70 +14,71 @@ EditorLayer::EditorLayer() : Axiom::Layer("EditorLayer") {
 
 void EditorLayer::onAttach() {
     Axiom::AX_LOG_INFO("EditorLayer attached");
+    Axiom::Locator::getWindow()->setSize(1280, 720);
     viewportSize = Axiom::Locator::getRenderer()->getCurrentRenderTargetSize();
 
     mainUiContext = {
         .renderer = Axiom::Locator::getUIRenderer(),
-        .dpiScale = Axiom::Locator::getWindow()->getWindowDPI() / 96.0f,
+        .theme = &Axiom::UITheme::getDefault(),
         .layer = 0,
     };
 
     uiRoot = std::make_shared<Axiom::UICanvas>();
 
-    auto mainLayout = std::make_shared<Axiom::UIHorizontalBox>();
-    mainLayout->setID("MainHBox");
-    uiRoot->addChild(mainLayout);
+    auto rootBackGround = std::make_shared<Axiom::UIPanel>();
+    rootBackGround->setId("RootBackground");
+    rootBackGround->setBackgroundColor(mainUiContext.theme->windowBackgroundColor);
+    uiRoot->addSlot(rootBackGround);
 
-    auto leftPanel = std::make_shared<Axiom::UIPanel>();
-    leftPanel->setID("LeftPanel");
-    leftPanel->setFixedSize({320.0f, -1.0f});
-    leftPanel->setHorizontalAlignment(Axiom::UIAlignment::Start);
-    leftPanel->setPadding({8.0f, 8.0f, 8.0f, 8.0f});
-    mainLayout->addChild(leftPanel);
+    auto mainLayout = std::make_shared<Axiom::UIHorizontalBox>();
+    mainLayout->setId("MainHBox");
+    rootBackGround->addSlot(mainLayout);
+
+    leftPanel = std::make_shared<Axiom::UIPanel>();
+    leftPanel->setId("LeftPanel");
+    leftPanel->setBackgroundColor(mainUiContext.theme->panelBackgroundColor);
+    mainLayout->addSlot(leftPanel)
+        .setMargin(mainUiContext.theme->containerPadding)
+        .setFixedSize({320.0f, -1.0f})
+        .setHorizontalAlignment(Axiom::UIAlignment::Start);
 
     auto leftVBox = std::make_shared<Axiom::UIVerticalBox>();
-    leftVBox->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-    leftVBox->setVerticalAlignment(Axiom::UIAlignment::Fill);
-    leftPanel->addChild(leftVBox);
+    leftPanel->addSlot(leftVBox).setHorizontalAlignment(Axiom::UIAlignment::Fill).setVerticalAlignment(Axiom::UIAlignment::Fill);
 
     hierarchyPanel = std::make_shared<Axiom::UIVerticalBox>();
-    hierarchyPanel->setID("HierarchyPanel");
-    hierarchyPanel->setPadding({4.0f, 4.0f, 4.0f, 4.0f});
-    hierarchyPanel->setVerticalAlignment(Axiom::UIAlignment::Fill);
-    leftVBox->addChild(hierarchyPanel);
+    hierarchyPanel->setId("HierarchyPanel");
+    leftVBox->addSlot(hierarchyPanel).setMargin(mainUiContext.theme->itemMargin).setVerticalAlignment(Axiom::UIAlignment::Fill);
 
     profilerPanel = std::make_shared<Axiom::UIVerticalBox>();
-    profilerPanel->setID("ProfilerPanel");
-    profilerPanel->setPadding({4.0f, 4.0f, 4.0f, 4.0f});
-    profilerPanel->setVerticalAlignment(Axiom::UIAlignment::End);
-    leftVBox->addChild(profilerPanel);
+    profilerPanel->setId("ProfilerPanel");
+    leftVBox->addSlot(profilerPanel).setMargin(mainUiContext.theme->itemMargin).setVerticalAlignment(Axiom::UIAlignment::End);
 
     auto viewportPanel = std::make_shared<Axiom::UIPanel>();
-    viewportPanel->setID("ViewportPanel");
-    viewportPanel->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-    viewportPanel->setVerticalAlignment(Axiom::UIAlignment::Fill);
-    viewportPanel->setPadding({0.0f, 0.0f, 0.0f, 0.0f});
-    viewportPanel->setBackgroundColor(uiRoot->getTheme()->windowBackgroundColor);
-    mainLayout->addChild(viewportPanel);
+    viewportPanel->setId("ViewportPanel");
+    viewportPanel->setBackgroundColor(mainUiContext.theme->windowBackgroundColor);
+    mainLayout->addSlot(viewportPanel)
+        .setMargin({0.0f, 0.0f, 0.0f, 0.0f})
+        .setHorizontalAlignment(Axiom::UIAlignment::Fill)
+        .setVerticalAlignment(Axiom::UIAlignment::Fill);
 
     viewportImage = std::make_shared<Axiom::UIImage>();
-    viewportImage->setID("Viewport");
-    viewportImage->setFixedSize({640.0f, 360.0f});
-    viewportImage->setVerticalAlignment(Axiom::UIAlignment::Start);
-    viewportImage->setHorizontalAlignment(Axiom::UIAlignment::Center);
-    viewportPanel->addChild(viewportImage);
+    viewportImage->setId("Viewport");
+    viewportPanel->addSlot(viewportImage)
+        .setFixedSize({640.0f, 360.0f})
+        .setHorizontalAlignment(Axiom::UIAlignment::Center)
+        .setVerticalAlignment(Axiom::UIAlignment::Start);
 
     auto rightPanel = std::make_shared<Axiom::UIPanel>();
-    rightPanel->setID("RightPanel");
-    rightPanel->setFixedSize({320.0f, -1.0f});
-    rightPanel->setHorizontalAlignment(Axiom::UIAlignment::End);
-    rightPanel->setPadding({8.0f, 8.0f, 8.0f, 8.0f});
-    mainLayout->addChild(rightPanel);
+    rightPanel->setId("RightPanel");
+    rightPanel->setBackgroundColor(mainUiContext.theme->panelBackgroundColor);
+    mainLayout->addSlot(rightPanel)
+        .setMargin(mainUiContext.theme->containerPadding)
+        .setFixedSize({320.0f, -1.0f})
+        .setHorizontalAlignment(Axiom::UIAlignment::End);
 
     inspectorPanel = std::make_shared<Axiom::UIVerticalBox>();
-    inspectorPanel->setID("InspectorPanel");
-    inspectorPanel->setPadding({4.0f, 4.0f, 4.0f, 4.0f});
-    rightPanel->addChild(inspectorPanel);
+    inspectorPanel->setId("InspectorPanel");
+    rightPanel->addSlot(inspectorPanel).setMargin(mainUiContext.theme->itemMargin);
 
     scene = std::make_shared<Axiom::Scene>();
     Axiom::SceneSerializer sceneSerializer(scene.get());
@@ -155,13 +158,12 @@ void EditorLayer::onUpdate() {
         shouldRefreshInspector = false;
     }
     refreshProfilerPanel();
-    uiRoot->arrange(mainUiContext, Math::Vec2(0, 0), Math::Vec2(winWidth, winHeight));
+    uiRoot->updateLayout(mainUiContext, Math::Vec2(0, 0), Math::Vec2(winWidth, winHeight));
 }
 
 void EditorLayer::onUIRender() {
     mainUiContext.renderer->pushScissorRect({{0, 0}, {Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight()}}, mainUiContext.layer);
     uiRoot->onRender(mainUiContext, Math::Rect({0, 0}, {Axiom::Locator::getWindow()->getWidth(), Axiom::Locator::getWindow()->getHeight()}));
-
     mainUiContext.renderer->popScissorRect(mainUiContext.layer);
 }
 
@@ -170,8 +172,8 @@ void EditorLayer::onEvent(Axiom::Event& event) {
 
     dispatcher.dispatch<Axiom::MouseButtonPressedEvent>([this](const Axiom::MouseButtonPressedEvent& e) {
         if (e.getMouseButton() == Axiom::KeyCode::RightButton) {
-            auto bounds = hierarchyPanel->getArrangedPosition();
-            auto size = hierarchyPanel->getArrangedSize();
+            auto bounds = leftPanel->getArrangedPosition();
+            auto size = leftPanel->getArrangedSize();
             float mouseX = e.getMouseX();
             float mouseY = e.getMouseY();
 
@@ -213,90 +215,80 @@ void EditorLayer::onRender(Axiom::RenderGraph& renderGraph) {
 }
 
 void EditorLayer::refreshHierarchyPanel() {
-    hierarchyPanel->clearChildren();
+    hierarchyPanel->clearSlots();
     hierarchyButtons.clear();
 
     auto headerRow = std::make_shared<Axiom::UIHorizontalBox>();
-    headerRow->setVerticalAlignment(Axiom::UIAlignment::Start);
-    headerRow->setMargin({0.0f, 0.0f, 0.0f, 8.0f});
 
     auto headerText = std::make_shared<Axiom::UIText>("Hierarchy");
-    headerText->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-    headerRow->addChild(headerText);
-    hierarchyPanel->addChild(headerRow);
+    headerRow->addSlot(headerText).setHorizontalAlignment(Axiom::UIAlignment::Fill);
+    hierarchyPanel->addSlot(headerRow).setVerticalAlignment(Axiom::UIAlignment::Start);
 
     Axiom::View entityView = scene->view();
     for (uint32_t entityId : entityView) {
         Axiom::Entity entity = scene->getEntity(entityId);
-        auto& tag = entity.getComponent<Axiom::TagComponent>();
+        auto& tagComponent = entity.getComponent<Axiom::TagComponent>();
 
         auto row = std::make_shared<Axiom::UIHorizontalBox>();
-        row->setVerticalAlignment(Axiom::UIAlignment::Start);
-        row->setMargin({0.0f, 0.0f, 0.0f, 4.0f});
 
-        auto entityButton = std::make_shared<Axiom::UIButton>(tag.tag);
-        entityButton->setID("Entity_" + std::to_string(entityId));
-        entityButton->setVerticalAlignment(Axiom::UIAlignment::Start);
-        entityButton->setPadding({4.0f, 4.0f, 4.0f, 4.0f});
-        entityButton->setMargin({0.0f, 0.0f, 4.0f, 0.0f});
-        entityButton->setFixedSize({-1.0f, 24.0f});
+        auto entityButton = std::make_shared<Axiom::UIButton>();
+        entityButton->setText(tagComponent.tag);
+        entityButton->setId("Entity_" + std::to_string(entityId));
 
         if (selectedEntity == entity) {
-            entityButton->setNormalColor(uiRoot->getTheme()->accentColor);
+            entityButton->setNormalColor(mainUiContext.theme->accentColor);
         }
 
         hierarchyButtons[entityId] = entityButton;
 
         entityButton->setOnClick([this, entity, entityId]() {
             if (selectedEntity && hierarchyButtons.count(selectedEntity.getId())) {
-                hierarchyButtons[selectedEntity.getId()]->setNormalColor(uiRoot->getTheme()->controlNormalColor);
+                hierarchyButtons[selectedEntity.getId()]->setNormalColor(mainUiContext.theme->controlNormalColor);
             }
 
             selectedEntity = entity;
-            hierarchyButtons[entityId]->setNormalColor(uiRoot->getTheme()->accentColor);
+            hierarchyButtons[entityId]->setNormalColor(mainUiContext.theme->accentColor);
             shouldRefreshInspector = true;
         });
-        row->addChild(entityButton);
 
-        auto deleteBtn = std::make_shared<Axiom::UIButton>("X");
-        deleteBtn->setFixedSize({24.0f, 24.0f});
-        deleteBtn->setVerticalAlignment(Axiom::UIAlignment::Start);
-        deleteBtn->setNormalColor(uiRoot->getTheme()->errorColor);
+        row->addSlot(entityButton)
+            .setMargin(mainUiContext.theme->itemMargin)
+            .setFixedSize({-1.0f, mainUiContext.theme->defaultRowHeight})
+            .setVerticalAlignment(Axiom::UIAlignment::Start);
+
+        auto deleteBtn = std::make_shared<Axiom::UIButton>();
+        deleteBtn->setText("X");
+        deleteBtn->setNormalColor(Axiom::Color::red());
         deleteBtn->setOnClick([this, entity]() {
             if (selectedEntity == entity) {
                 selectedEntity = {};
-                inspectorPanel->clearChildren();
+                inspectorPanel->clearSlots();
             }
             scene->destroyEntity(entity);
             shouldRefreshHierarchy = true;
         });
-        row->addChild(deleteBtn);
 
-        hierarchyPanel->addChild(row);
+        row->addSlot(deleteBtn)
+            .setFixedSize({mainUiContext.theme->defaultRowHeight, mainUiContext.theme->defaultRowHeight})
+            .setVerticalAlignment(Axiom::UIAlignment::Start);
+
+        hierarchyPanel->addSlot(row).setVerticalAlignment(Axiom::UIAlignment::Start);
     }
 }
 
 void EditorLayer::refreshInspectorPanel() {
-    inspectorPanel->clearChildren();
+    inspectorPanel->clearSlots();
     if (!selectedEntity) {
         return;
     }
 
     if (selectedEntity.hasComponent<Axiom::TagComponent>()) {
         auto tagRow = std::make_shared<Axiom::UIHorizontalBox>();
-        tagRow->setMargin({0.0f, 0.0f, 0.0f, 16.0f});
-        tagRow->setVerticalAlignment(Axiom::UIAlignment::Start);
 
         auto label = std::make_shared<Axiom::UIText>("Name:");
-        label->setVerticalAlignment(Axiom::UIAlignment::Start);
-        label->setHorizontalAlignment(Axiom::UIAlignment::Start);
-        label->setMargin({0.0f, 0.0f, 8.0f, 0.0f});
-        label->setFixedSize({120.0f, -1.0f});
-        tagRow->addChild(label);
+        tagRow->addSlot(label).setFixedSize({120.0f, -1.0f}).setHorizontalAlignment(Axiom::UIAlignment::Start).setVerticalAlignment(Axiom::UIAlignment::Start);
 
         auto nameInput = std::make_shared<Axiom::UITextInput>();
-        nameInput->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-        nameInput->setVerticalAlignment(Axiom::UIAlignment::Start);
 
         Axiom::Entity capturedEntity = selectedEntity;
         nameInput->setValueGetter([capturedEntity]() { return capturedEntity.getComponent<Axiom::TagComponent>().tag; });
@@ -307,8 +299,8 @@ void EditorLayer::refreshInspectorPanel() {
                 hierarchyButtons[id]->setText(v);
             }
         });
-        tagRow->addChild(nameInput);
-        inspectorPanel->addChild(tagRow);
+        tagRow->addSlot(nameInput).setHorizontalAlignment(Axiom::UIAlignment::Fill).setVerticalAlignment(Axiom::UIAlignment::Start);
+        inspectorPanel->addSlot(tagRow).setVerticalAlignment(Axiom::UIAlignment::Start);
     }
 
     for (const auto& [typeIndex, dataPtr] : selectedEntity.getComponents()) {
@@ -319,31 +311,24 @@ void EditorLayer::refreshInspectorPanel() {
         }
 
         auto componentGroup = std::make_shared<Axiom::UICollapsableGroup>(componentInfo->name.substr(0, componentInfo->name.find("Component")));
-        componentGroup->setMargin({0.0f, 0.0f, 0.0f, 8.0f});
-        componentGroup->setVerticalAlignment(Axiom::UIAlignment::Start);
 
         for (const auto& field : componentInfo->fields) {
-            auto fieldUI = InspectorUI::createFieldUI(selectedEntity, typeIndex, field, uiRoot->getTheme());
+            auto fieldUI = InspectorUI::createFieldUI(selectedEntity, typeIndex, field, mainUiContext.theme);
 
             if (fieldUI) {
                 auto row = std::make_shared<Axiom::UIHorizontalBox>();
-                row->setMargin({4.0f, 4.0f, 4.0f, 4.0f});
-                fieldUI->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-                row->addChild(fieldUI);
-                componentGroup->addChild(row);
+                row->addSlot(fieldUI).setHorizontalAlignment(Axiom::UIAlignment::Fill);
+                componentGroup->addSlot(row);
             }
         }
-        inspectorPanel->addChild(componentGroup);
+        inspectorPanel->addSlot(componentGroup).setVerticalAlignment(Axiom::UIAlignment::Start);
     }
 
     auto addComponentGroup = std::make_shared<Axiom::UICollapsableGroup>("+ Add Component");
-    addComponentGroup->setMargin({0.0f, 10.0f, 0.0f, 0.0f});
-    addComponentGroup->setVerticalAlignment(Axiom::UIAlignment::Start);
 
     auto createAddButton = [this](const std::string& name, auto checkHas, auto addComp) {
-        auto btn = std::make_shared<Axiom::UIButton>(name);
-        btn->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-        btn->setMargin({4.0f, 4.0f, 4.0f, 4.0f});
+        auto btn = std::make_shared<Axiom::UIButton>();
+        btn->setText(name);
         btn->setOnClick([this, checkHas, addComp]() {
             if (!checkHas()) {
                 addComp();
@@ -363,20 +348,22 @@ void EditorLayer::refreshInspectorPanel() {
             continue;
         }
 
-        addComponentGroup->addChild(createAddButton(
-            componentInfo.name.substr(0, componentInfo.name.find("Component")), [this, typeIndex]() { return selectedEntity.hasComponent(typeIndex); },
-            [this, typeIndex, componentInfo]() { Axiom::ComponentReflection::addComponent(selectedEntity, componentInfo.name, nullptr); }));
+        addComponentGroup
+            ->addSlot(createAddButton(
+                componentInfo.name.substr(0, componentInfo.name.find("Component")), [this, typeIndex]() { return selectedEntity.hasComponent(typeIndex); },
+                [this, typeIndex, componentInfo]() { Axiom::ComponentReflection::addComponent(selectedEntity, componentInfo.name, nullptr); }))
+            .setHorizontalAlignment(Axiom::UIAlignment::Fill);
     }
 
-    inspectorPanel->addChild(addComponentGroup);
+    inspectorPanel->addSlot(addComponentGroup).setVerticalAlignment(Axiom::UIAlignment::Start);
 }
 
 void EditorLayer::spawnHierarchyContextMenu(Math::Vec2 spawnPos) {
     contextMenu = std::make_shared<Axiom::UIPanel>();
-    contextMenu->setBackgroundColor(Axiom::Color::transparent());
+    contextMenu->setBackgroundColor(mainUiContext.theme->panelBackgroundColor);
 
-    auto createBtn = std::make_shared<Axiom::UIButton>("Create Empty Entity");
-    createBtn->setPadding({10.0f, 5.0f, 10.0f, 5.0f});
+    auto createBtn = std::make_shared<Axiom::UIButton>();
+    createBtn->setText("Create Empty Entity");
     createBtn->setOnClick([this]() {
         Axiom::Entity newEntity = scene->createEntity();
         newEntity.addComponent<Axiom::TagComponent>({"New Entity"});
@@ -387,37 +374,33 @@ void EditorLayer::spawnHierarchyContextMenu(Math::Vec2 spawnPos) {
         uiRoot->closePopup();
     });
 
-    contextMenu->addChild(createBtn);
+    contextMenu->addSlot(createBtn).setMargin(mainUiContext.theme->containerPadding);
     uiRoot->openPopup(contextMenu, spawnPos);
 }
 
 void EditorLayer::refreshProfilerPanel() {
     const auto& profiles = Axiom::Profiler::getProfiles();
 
-    if (profilerPanel->getChildren().size() != profiles.size() + 1) {
-        profilerPanel->clearChildren();
+    if (profilerPanel->getSlots().size() != profiles.size() + 1) {
+        profilerPanel->clearSlots();
 
         auto headerRow = std::make_shared<Axiom::UIHorizontalBox>();
-        headerRow->setVerticalAlignment(Axiom::UIAlignment::Start);
-        headerRow->setMargin({0.0f, 0.0f, 0.0f, 10.0f});
 
         auto headerText = std::make_shared<Axiom::UIText>("Profiler");
-        headerText->setHorizontalAlignment(Axiom::UIAlignment::Fill);
-        headerRow->addChild(headerText);
-        profilerPanel->addChild(headerRow);
+        headerRow->addSlot(headerText).setHorizontalAlignment(Axiom::UIAlignment::Fill);
+        profilerPanel->addSlot(headerRow).setVerticalAlignment(Axiom::UIAlignment::Start);
 
         for (size_t i = 0; i < profiles.size(); i++) {
             auto label = std::make_shared<Axiom::UIText>("");
-            label->setVerticalAlignment(Axiom::UIAlignment::Start);
-            profilerPanel->addChild(label);
+            profilerPanel->addSlot(label).setVerticalAlignment(Axiom::UIAlignment::Start);
         }
     }
 
-    auto children = profilerPanel->getChildren();
+    auto slots = profilerPanel->getSlots();
     for (size_t i = 0; i < profiles.size(); ++i) {
         auto ms = std::chrono::duration_cast<std::chrono::duration<double>>(profiles[i].duration);
         auto labelText = std::format("{}: {:.4f} ms", profiles[i].name, ms.count());
-        auto textWidget = std::static_pointer_cast<Axiom::UIText>(children[i + 1]);
+        auto textWidget = std::static_pointer_cast<Axiom::UIText>(slots[i + 1].content);
         textWidget->setText(labelText);
     }
 }

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-std::shared_ptr<Axiom::UIElement> InspectorUI::createFieldUI(Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field,
+std::shared_ptr<Axiom::UIElement> InspectorUI::createFieldUI(Axiom::Entity entity, uint8_t componentId, const Axiom::FieldInfo& field,
                                                              const Axiom::UITheme* theme) {
     auto horizontalBox = std::make_shared<Axiom::UIHorizontalBox>();
 
@@ -26,34 +26,34 @@ std::shared_ptr<Axiom::UIElement> InspectorUI::createFieldUI(Axiom::Entity entit
 
     switch (field.type) {
     case Axiom::FieldType::Float:
-        buildFloatUI(horizontalBox, entity, compTypeIndex, field);
+        buildFloatUI(horizontalBox, entity, componentId, field);
         break;
     case Axiom::FieldType::Int:
-        buildIntUI(horizontalBox, entity, compTypeIndex, field);
+        buildIntUI(horizontalBox, entity, componentId, field);
         break;
     case Axiom::FieldType::Bool:
-        buildBoolUI(horizontalBox, entity, compTypeIndex, field);
+        buildBoolUI(horizontalBox, entity, componentId, field);
         break;
     case Axiom::FieldType::String:
-        buildStringUI(horizontalBox, entity, compTypeIndex, field);
+        buildStringUI(horizontalBox, entity, componentId, field);
         break;
     case Axiom::FieldType::Vec2:
-        buildVec2UI(horizontalBox, entity, compTypeIndex, field);
+        buildVec2UI(horizontalBox, entity, componentId, field);
         break;
     case Axiom::FieldType::Vec3:
-        buildVec3UI(horizontalBox, entity, compTypeIndex, field);
+        buildVec3UI(horizontalBox, entity, componentId, field);
         break;
     case Axiom::FieldType::Vec4:
-        buildVec4UI(horizontalBox, entity, compTypeIndex, field);
+        buildVec4UI(horizontalBox, entity, componentId, field);
         break;
     case Axiom::FieldType::Color:
-        buildColorUI(horizontalBox, entity, compTypeIndex, field, theme);
+        buildColorUI(horizontalBox, entity, componentId, field, theme);
         break;
     case Axiom::FieldType::AssetHandle:
-        buildAssetHandleUI(horizontalBox, entity, compTypeIndex, field, theme);
+        buildAssetHandleUI(horizontalBox, entity, componentId, field, theme);
         break;
     case Axiom::FieldType::Enum:
-        buildEnumUI(horizontalBox, entity, compTypeIndex, field);
+        buildEnumUI(horizontalBox, entity, componentId, field);
         break;
     default:
         break;
@@ -62,18 +62,17 @@ std::shared_ptr<Axiom::UIElement> InspectorUI::createFieldUI(Axiom::Entity entit
     return horizontalBox;
 }
 
-void InspectorUI::buildFloatUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex,
-                               const Axiom::FieldInfo& field) {
+void InspectorUI::buildFloatUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, uint8_t componentId, const Axiom::FieldInfo& field) {
     auto drag = std::make_shared<Axiom::UIScalarField<float>>();
-    drag->setValueGetter([entity, compTypeIndex, offset = field.offset]() -> float {
-        void* compData = entity.getComponentData(compTypeIndex);
+    drag->setValueGetter([entity, componentId, offset = field.offset]() -> float {
+        void* compData = entity.getComponentData(componentId);
         if (!compData) {
             return 0.0f;
         }
         return *reinterpret_cast<float*>(static_cast<char*>(compData) + offset);
     });
-    drag->setValueSetter([entity, compTypeIndex, offset = field.offset](float newValue) mutable {
-        void* compData = entity.getComponentData(compTypeIndex);
+    drag->setValueSetter([entity, componentId, offset = field.offset](float newValue) mutable {
+        void* compData = entity.getComponentData(componentId);
         if (compData) {
             *reinterpret_cast<float*>(static_cast<char*>(compData) + offset) = newValue;
         }
@@ -81,17 +80,17 @@ void InspectorUI::buildFloatUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axio
     box->addSlot(drag).setHorizontalAlignment(Axiom::UIAlignment::Fill);
 }
 
-void InspectorUI::buildIntUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field) {
+void InspectorUI::buildIntUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, uint8_t componentId, const Axiom::FieldInfo& field) {
     auto drag = std::make_shared<Axiom::UIScalarField<int>>();
-    drag->setValueGetter([entity, compTypeIndex, offset = field.offset] -> int {
-        void* compData = entity.getComponentData(compTypeIndex);
+    drag->setValueGetter([entity, componentId, offset = field.offset] -> int {
+        void* compData = entity.getComponentData(componentId);
         if (!compData) {
             return 0;
         }
         return *reinterpret_cast<int*>(static_cast<char*>(compData) + offset);
     });
-    drag->setValueSetter([entity, compTypeIndex, offset = field.offset](int newValue) mutable {
-        void* compData = entity.getComponentData(compTypeIndex);
+    drag->setValueSetter([entity, componentId, offset = field.offset](int newValue) mutable {
+        void* compData = entity.getComponentData(componentId);
         if (compData) {
             *reinterpret_cast<int*>(static_cast<char*>(compData) + offset) = newValue;
         }
@@ -99,17 +98,17 @@ void InspectorUI::buildIntUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom:
     box->addSlot(drag).setHorizontalAlignment(Axiom::UIAlignment::Fill);
 }
 
-void InspectorUI::buildBoolUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field) {
+void InspectorUI::buildBoolUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, uint8_t componentId, const Axiom::FieldInfo& field) {
     auto checkBox = std::make_shared<Axiom::UICheckbox>();
-    checkBox->setValueGetter([entity, compTypeIndex, offset = field.offset]() -> bool {
-        void* compData = entity.getComponentData(compTypeIndex);
+    checkBox->setValueGetter([entity, componentId, offset = field.offset]() -> bool {
+        void* compData = entity.getComponentData(componentId);
         if (!compData) {
             return false;
         }
         return *reinterpret_cast<bool*>(static_cast<char*>(compData) + offset);
     });
-    checkBox->setValueSetter([entity, compTypeIndex, offset = field.offset](bool newValue) mutable {
-        void* compData = entity.getComponentData(compTypeIndex);
+    checkBox->setValueSetter([entity, componentId, offset = field.offset](bool newValue) mutable {
+        void* compData = entity.getComponentData(componentId);
         if (compData) {
             *reinterpret_cast<bool*>(static_cast<char*>(compData) + offset) = newValue;
         }
@@ -117,18 +116,17 @@ void InspectorUI::buildBoolUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom
     box->addSlot(checkBox).setHorizontalAlignment(Axiom::UIAlignment::Start);
 }
 
-void InspectorUI::buildStringUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex,
-                                const Axiom::FieldInfo& field) {
+void InspectorUI::buildStringUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, uint8_t componentId, const Axiom::FieldInfo& field) {
     auto textInput = std::make_shared<Axiom::UITextInput>();
-    textInput->setValueGetter([entity, compTypeIndex, offset = field.offset]() -> std::string {
-        void* compData = entity.getComponentData(compTypeIndex);
+    textInput->setValueGetter([entity, componentId, offset = field.offset]() -> std::string {
+        void* compData = entity.getComponentData(componentId);
         if (!compData) {
             return "";
         }
         return *reinterpret_cast<std::string*>(static_cast<char*>(compData) + offset);
     });
-    textInput->setValueSetter([entity, compTypeIndex, offset = field.offset](const std::string& newValue) {
-        void* compData = entity.getComponentData(compTypeIndex);
+    textInput->setValueSetter([entity, componentId, offset = field.offset](const std::string& newValue) {
+        void* compData = entity.getComponentData(componentId);
         if (compData) {
             *reinterpret_cast<std::string*>(static_cast<char*>(compData) + offset) = newValue;
         }
@@ -136,7 +134,7 @@ void InspectorUI::buildStringUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axi
     box->addSlot(textInput);
 }
 
-void InspectorUI::buildVec2UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field) {
+void InspectorUI::buildVec2UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, uint8_t componentId, const Axiom::FieldInfo& field) {
     auto createAxis = [&](Axiom::Color color, auto getter, auto setter) {
         auto drag = std::make_shared<Axiom::UIScalarField<float>>();
         drag->setValueGetter(getter);
@@ -147,34 +145,34 @@ void InspectorUI::buildVec2UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom
 
     createAxis(
         Axiom::Color(0.9f, 0.1f, 0.1f),
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Math::Vec2*>(static_cast<char*>(compData) + offset)->x();
         },
-        [entity, compTypeIndex, offset = field.offset](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData)
                 reinterpret_cast<Math::Vec2*>(static_cast<char*>(compData) + offset)->x() = v;
         });
 
     createAxis(
         Axiom::Color(0.1f, 0.9f, 0.1f),
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Math::Vec2*>(static_cast<char*>(compData) + offset)->y();
         },
-        [entity, compTypeIndex, offset = field.offset](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData)
                 reinterpret_cast<Math::Vec2*>(static_cast<char*>(compData) + offset)->y() = v;
         });
 }
 
-void InspectorUI::buildVec3UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field) {
+void InspectorUI::buildVec3UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, uint8_t componentId, const Axiom::FieldInfo& field) {
     auto createAxis = [&](Axiom::Color color, auto getter, auto setter) {
         auto drag = std::make_shared<Axiom::UIScalarField<float>>();
         drag->setValueGetter(getter);
@@ -185,48 +183,48 @@ void InspectorUI::buildVec3UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom
 
     createAxis(
         Axiom::Color(0.9f, 0.1f, 0.1f),
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Math::Vec3*>(static_cast<char*>(compData) + offset)->x();
         },
-        [entity, compTypeIndex, offset = field.offset](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData)
                 reinterpret_cast<Math::Vec3*>(static_cast<char*>(compData) + offset)->x() = v;
         });
 
     createAxis(
         Axiom::Color(0.1f, 0.9f, 0.1f),
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Math::Vec3*>(static_cast<char*>(compData) + offset)->y();
         },
-        [entity, compTypeIndex, offset = field.offset](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData)
                 reinterpret_cast<Math::Vec3*>(static_cast<char*>(compData) + offset)->y() = v;
         });
 
     createAxis(
         Axiom::Color(0.1f, 0.1f, 0.9f),
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Math::Vec3*>(static_cast<char*>(compData) + offset)->z();
         },
-        [entity, compTypeIndex, offset = field.offset](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData)
                 reinterpret_cast<Math::Vec3*>(static_cast<char*>(compData) + offset)->z() = v;
         });
 }
 
-void InspectorUI::buildVec4UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field) {
+void InspectorUI::buildVec4UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, uint8_t componentId, const Axiom::FieldInfo& field) {
     auto createAxis = [&](Axiom::Color color, auto getter, auto setter) {
         auto drag = std::make_shared<Axiom::UIScalarField<float>>();
         drag->setValueGetter(getter);
@@ -237,66 +235,66 @@ void InspectorUI::buildVec4UI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom
 
     createAxis(
         Axiom::Color(0.9f, 0.1f, 0.1f),
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Math::Vec4*>(static_cast<char*>(compData) + offset)->x();
         },
-        [entity, compTypeIndex, offset = field.offset](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData)
                 reinterpret_cast<Math::Vec4*>(static_cast<char*>(compData) + offset)->x() = v;
         });
 
     createAxis(
         Axiom::Color(0.1f, 0.9f, 0.1f),
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Math::Vec4*>(static_cast<char*>(compData) + offset)->y();
         },
-        [entity, compTypeIndex, offset = field.offset](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData)
                 reinterpret_cast<Math::Vec4*>(static_cast<char*>(compData) + offset)->y() = v;
         });
 
     createAxis(
         Axiom::Color(0.1f, 0.1f, 0.9f),
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Math::Vec4*>(static_cast<char*>(compData) + offset)->z();
         },
-        [entity, compTypeIndex, offset = field.offset](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData)
                 reinterpret_cast<Math::Vec4*>(static_cast<char*>(compData) + offset)->z() = v;
         });
 
     createAxis(
         Axiom::Color(0.9f, 0.9f, 0.1f),
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Math::Vec4*>(static_cast<char*>(compData) + offset)->w();
         },
-        [entity, compTypeIndex, offset = field.offset](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData)
                 reinterpret_cast<Math::Vec4*>(static_cast<char*>(compData) + offset)->w() = v;
         });
 }
 
-void InspectorUI::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field,
+void InspectorUI::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, uint8_t componentId, const Axiom::FieldInfo& field,
                                const Axiom::UITheme* theme) {
     auto colorPreview = std::make_shared<Axiom::UIButton>();
 
-    void* initialData = entity.getComponentData(compTypeIndex);
+    void* initialData = entity.getComponentData(componentId);
     if (initialData) {
         Axiom::Color initialColor = *reinterpret_cast<Axiom::Color*>(static_cast<char*>(initialData) + field.offset);
         colorPreview->setNormalColor(initialColor);
@@ -306,8 +304,8 @@ void InspectorUI::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axio
 
     box->addSlot(colorPreview).setFixedSize({theme->defaultRowHeight, theme->defaultRowHeight}).setHorizontalAlignment(Axiom::UIAlignment::Start);
 
-    auto updatePreview = [colorPreview, entity, compTypeIndex, offset = field.offset]() {
-        void* compData = entity.getComponentData(compTypeIndex);
+    auto updatePreview = [colorPreview, entity, componentId, offset = field.offset]() {
+        void* compData = entity.getComponentData(componentId);
         if (compData) {
             Axiom::Color c = *reinterpret_cast<Axiom::Color*>(static_cast<char*>(compData) + offset);
             colorPreview->setNormalColor(c);
@@ -326,14 +324,14 @@ void InspectorUI::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axio
     };
 
     createChannelSlider(
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Axiom::Color*>(static_cast<char*>(compData) + offset)->r();
         },
-        [entity, compTypeIndex, offset = field.offset, updatePreview](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset, updatePreview](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData) {
                 reinterpret_cast<Axiom::Color*>(static_cast<char*>(compData) + offset)->r() = v;
                 updatePreview();
@@ -341,14 +339,14 @@ void InspectorUI::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axio
         });
 
     createChannelSlider(
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Axiom::Color*>(static_cast<char*>(compData) + offset)->g();
         },
-        [entity, compTypeIndex, offset = field.offset, updatePreview](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset, updatePreview](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData) {
                 reinterpret_cast<Axiom::Color*>(static_cast<char*>(compData) + offset)->g() = v;
                 updatePreview();
@@ -356,14 +354,14 @@ void InspectorUI::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axio
         });
 
     createChannelSlider(
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Axiom::Color*>(static_cast<char*>(compData) + offset)->b();
         },
-        [entity, compTypeIndex, offset = field.offset, updatePreview](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset, updatePreview](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData) {
                 reinterpret_cast<Axiom::Color*>(static_cast<char*>(compData) + offset)->b() = v;
                 updatePreview();
@@ -371,14 +369,14 @@ void InspectorUI::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axio
         });
 
     createChannelSlider(
-        [entity, compTypeIndex, offset = field.offset]() -> float {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset]() -> float {
+            void* compData = entity.getComponentData(componentId);
             if (!compData)
                 return 0.0f;
             return reinterpret_cast<Axiom::Color*>(static_cast<char*>(compData) + offset)->a();
         },
-        [entity, compTypeIndex, offset = field.offset, updatePreview](float v) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        [entity, componentId, offset = field.offset, updatePreview](float v) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData) {
                 reinterpret_cast<Axiom::Color*>(static_cast<char*>(compData) + offset)->a() = v;
                 updatePreview();
@@ -386,12 +384,12 @@ void InspectorUI::buildColorUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axio
         });
 }
 
-void InspectorUI::buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex,
-                                     const Axiom::FieldInfo& field, const Axiom::UITheme* theme) {
+void InspectorUI::buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, uint8_t componentId, const Axiom::FieldInfo& field,
+                                     const Axiom::UITheme* theme) {
     auto slotBox = std::make_shared<Axiom::UIHorizontalBox>();
 
-    auto getAssetName = [entity, compTypeIndex, offset = field.offset]() -> std::string {
-        void* compData = entity.getComponentData(compTypeIndex);
+    auto getAssetName = [entity, componentId, offset = field.offset]() -> std::string {
+        void* compData = entity.getComponentData(componentId);
         if (!compData)
             return "None";
         Axiom::UUID id = *reinterpret_cast<Axiom::UUID*>(static_cast<char*>(compData) + offset);
@@ -402,7 +400,7 @@ void InspectorUI::buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> box
 
     auto assetButton = std::make_shared<Axiom::UIButton>();
     assetButton->setText(getAssetName());
-    assetButton->setOnClick([assetButton, field, entity, compTypeIndex, offset = field.offset, getAssetName, theme]() {
+    assetButton->setOnClick([assetButton, field, entity, componentId, offset = field.offset, getAssetName, theme]() {
         Axiom::UICanvas* canvas = assetButton->getParentCanvas();
         if (!canvas)
             return;
@@ -435,8 +433,8 @@ void InspectorUI::buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> box
             std::string assetName = Axiom::AssetManager::getMetadata(id).name;
             auto itemBtn = std::make_shared<Axiom::UIButton>();
             itemBtn->setText(assetName);
-            itemBtn->setOnClick([entity, compTypeIndex, offset, id, assetButton, getAssetName, canvas]() {
-                void* componentData = entity.getComponentData(compTypeIndex);
+            itemBtn->setOnClick([entity, componentId, offset, id, assetButton, getAssetName, canvas]() {
+                void* componentData = entity.getComponentData(componentId);
                 if (componentData) {
                     *reinterpret_cast<Axiom::UUID*>(static_cast<char*>(componentData) + offset) = id;
                     assetButton->setText(getAssetName());
@@ -461,8 +459,8 @@ void InspectorUI::buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> box
     auto clearButton = std::make_shared<Axiom::UIButton>();
     clearButton->setText("X");
     clearButton->setNormalColor(Axiom::Color::red());
-    clearButton->setOnClick([entity, compTypeIndex, offset = field.offset, assetButton, getAssetName]() {
-        void* compData = entity.getComponentData(compTypeIndex);
+    clearButton->setOnClick([entity, componentId, offset = field.offset, assetButton, getAssetName]() {
+        void* compData = entity.getComponentData(componentId);
         if (compData) {
             *reinterpret_cast<Axiom::UUID*>(static_cast<char*>(compData) + offset) = Axiom::UUID();
             assetButton->setText(getAssetName());
@@ -474,20 +472,20 @@ void InspectorUI::buildAssetHandleUI(std::shared_ptr<Axiom::UIHorizontalBox> box
     box->addSlot(slotBox).setHorizontalAlignment(Axiom::UIAlignment::Fill);
 }
 
-void InspectorUI::buildEnumUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, std::type_index compTypeIndex, const Axiom::FieldInfo& field) {
+void InspectorUI::buildEnumUI(std::shared_ptr<Axiom::UIHorizontalBox> box, Axiom::Entity entity, uint8_t componentId, const Axiom::FieldInfo& field) {
     auto dropdown = std::make_shared<Axiom::UIDropdown>();
     dropdown->setOptions(field.enumOptions);
 
     dropdown->setOptions(field.enumOptions)
-        .setValueGetter([entity, compTypeIndex, offset = field.offset]() -> int {
-            void* compData = entity.getComponentData(compTypeIndex);
+        .setValueGetter([entity, componentId, offset = field.offset]() -> int {
+            void* compData = entity.getComponentData(componentId);
             if (compData) {
                 return *reinterpret_cast<int*>(static_cast<char*>(compData) + offset);
             }
             return 0;
         })
-        .setValueSetter([entity, compTypeIndex, offset = field.offset](int index) mutable {
-            void* compData = entity.getComponentData(compTypeIndex);
+        .setValueSetter([entity, componentId, offset = field.offset](int index) mutable {
+            void* compData = entity.getComponentData(componentId);
             if (compData) {
                 *reinterpret_cast<int*>(static_cast<char*>(compData) + offset) = index;
             }

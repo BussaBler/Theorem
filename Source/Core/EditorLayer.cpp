@@ -1,5 +1,6 @@
 #include "EditorLayer.h"
 
+#include "ECS/Components/TagComponent.h"
 #include "Math/Color.h"
 #include "Project.h"
 #include "UI/InspectorUI.h"
@@ -204,7 +205,8 @@ void EditorLayer::onRender(Axiom::RenderGraph& renderGraph) {
                                           .shouldDrawSkybox = true,
                                           .shouldDrawGizmos = false,
                                           .shouldDrawWorldGrid = true};
-    if (selectedEntity) {
+
+    if (selectedEntity && selectedEntity.hasComponent<Axiom::TransformComponent>()) {
         renderContext.shouldDrawGizmos = true;
         renderContext.gizmosPosition = selectedEntity.getComponent<Axiom::TransformComponent>().position;
     }
@@ -224,7 +226,7 @@ void EditorLayer::refreshHierarchyPanel() {
     headerRow->addSlot(headerText).setHorizontalAlignment(Axiom::UIAlignment::Fill);
     hierarchyPanel->addSlot(headerRow).setVerticalAlignment(Axiom::UIAlignment::Start);
 
-    Axiom::View entityView = scene->view();
+    Axiom::View entityView = scene->view<Axiom::TagComponent>();
     for (uint32_t entityId : entityView) {
         Axiom::Entity entity = scene->getEntity(entityId);
         auto& tagComponent = entity.getComponent<Axiom::TagComponent>();
@@ -264,7 +266,7 @@ void EditorLayer::refreshHierarchyPanel() {
                 selectedEntity = {};
                 inspectorPanel->clearSlots();
             }
-            scene->destroyEntity(entity);
+            scene->deleteEntity(entity);
             shouldRefreshHierarchy = true;
         });
 
@@ -303,8 +305,8 @@ void EditorLayer::refreshInspectorPanel() {
         inspectorPanel->addSlot(tagRow).setVerticalAlignment(Axiom::UIAlignment::Start);
     }
 
-    for (const auto& [typeIndex, dataPtr] : selectedEntity.getComponents()) {
-        const Axiom::ComponentInfo* componentInfo = Axiom::ComponentReflection::getComponentInfo(typeIndex);
+    for (const auto& [componentId, dataPtr] : selectedEntity.getComponents()) {
+        const Axiom::ComponentInfo* componentInfo = Axiom::ComponentReflection::getComponentInfo(componentId);
 
         if (!componentInfo || componentInfo->name == "TagComponent" || componentInfo->name == "Tag") {
             continue;
@@ -313,7 +315,7 @@ void EditorLayer::refreshInspectorPanel() {
         auto componentGroup = std::make_shared<Axiom::UICollapsableGroup>(componentInfo->name.substr(0, componentInfo->name.find("Component")));
 
         for (const auto& field : componentInfo->fields) {
-            auto fieldUI = InspectorUI::createFieldUI(selectedEntity, typeIndex, field, mainUiContext.theme);
+            auto fieldUI = InspectorUI::createFieldUI(selectedEntity, componentId, field, mainUiContext.theme);
 
             if (fieldUI) {
                 auto row = std::make_shared<Axiom::UIHorizontalBox>();
@@ -339,19 +341,19 @@ void EditorLayer::refreshInspectorPanel() {
     };
 
     const auto& allComponents = Axiom::ComponentReflection::getRegistry();
-    for (const auto& [typeIndex, componentInfo] : allComponents) {
+    for (const auto& [componentId, componentInfo] : allComponents) {
         if (componentInfo.name == "TagComponent" || componentInfo.name == "Tag") {
             continue;
         }
 
-        if (selectedEntity.hasComponent(typeIndex)) {
+        if (selectedEntity.hasComponent(componentId)) {
             continue;
         }
 
         addComponentGroup
             ->addSlot(createAddButton(
-                componentInfo.name.substr(0, componentInfo.name.find("Component")), [this, typeIndex]() { return selectedEntity.hasComponent(typeIndex); },
-                [this, typeIndex, componentInfo]() { Axiom::ComponentReflection::addComponent(selectedEntity, componentInfo.name, nullptr); }))
+                componentInfo.name.substr(0, componentInfo.name.find("Component")), [this, componentId]() { return selectedEntity.hasComponent(componentId); },
+                [this, componentId, componentInfo]() { Axiom::ComponentReflection::addComponent(selectedEntity, componentInfo.name, nullptr); }))
             .setHorizontalAlignment(Axiom::UIAlignment::Fill);
     }
 
@@ -365,7 +367,7 @@ void EditorLayer::spawnHierarchyContextMenu(Math::Vec2 spawnPos) {
     auto createBtn = std::make_shared<Axiom::UIButton>();
     createBtn->setText("Create Empty Entity");
     createBtn->setOnClick([this]() {
-        Axiom::Entity newEntity = scene->createEntity();
+        Axiom::Entity newEntity = scene->newEntity();
         newEntity.addComponent<Axiom::TagComponent>({"New Entity"});
         selectedEntity = newEntity;
 
